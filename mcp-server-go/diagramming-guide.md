@@ -34,7 +34,7 @@ Before you start drawing, follow these steps:
 
 1. **Analyze context.** Understand the specific system, components, and processes involved in what you need to explain. Identify the key elements and relationships.
 2. **Select the right diagram type.** Choose based on what best communicates the concept — prioritize clarity and conciseness over what's easiest to draw. See the table below.
-3. **Plan for clear visualization.** When showing changes (e.g. a code change, config update, migration), use side-by-side "before and after" diagrams where unchanged parts are drawn identically in the same positions. This lets the viewer instantly spot what changed.
+3. **Plan for clear visualization.** When showing changes (e.g. a code change, config update, migration), use side-by-side "before and after" diagrams where unchanged parts are drawn identically in the same positions. **Highlight the differences** — use a distinct fill color (e.g. red fill `#FFEBEE` for removed/old behavior, green fill `#E8F5E9` for added/new behavior) on the sections that changed, while keeping unchanged sections in a neutral color. This lets the viewer instantly spot what changed.
 
 ## Choosing a diagram type
 
@@ -45,7 +45,7 @@ Pick the diagram type that best fits **what you're explaining**, not what feels 
 | How components connect | **Box-and-arrow** (architecture) | Static structure — what exists and how parts relate. Use when the viewer asks "what are the pieces?" |
 | Interactions over time | **Sequence diagram** (lifelines + arrows) | Dynamic behavior — messages, requests, and responses between actors in order. Use when explaining "how does X work?" or "what happens when Y?" |
 | Decision / branching process | **Flowchart** (boxes + diamonds) | Logic and control flow — if/else paths, state machines, algorithms |
-| Comparing two things | **Side-by-side** (split canvas) | Contrasting approaches, before/after, trade-offs. Draw unchanged parts identically on the same axis so differences stand out. |
+| Comparing two things | **Side-by-side** (split canvas) | Contrasting approaches, before/after, trade-offs. Draw unchanged parts identically on the same axis and use distinct fill colors to highlight the sections that differ (e.g. red for "before", green for "after"). |
 | Explaining one concept | **Annotated shape** (shape + callouts) | Zooming into a single component with labeled parts |
 | Overlapping categories | **Venn diagram** (overlapping circles) | Showing shared vs. distinct properties between 2-3 groups |
 | Lifecycle or transitions | **State diagram** (states + labeled arrows) | Showing how an entity moves between states over time |

@@ -367,8 +367,13 @@ function connect(): void {
           pendingValidationErrors = null;
         }
         if (data.ack_id) {
-          pendingAckId = data.ack_id;
-          // enableInput() will be called by onQueueEmpty when animation finishes
+          if (valid.length === 0 && errors.length > 0) {
+            // All instructions invalid — send errors back to agent immediately
+            sendAck(data.ack_id, '');
+          } else {
+            pendingAckId = data.ack_id;
+            // enableInput() will be called by onQueueEmpty when animation finishes
+          }
         }
         break;
       }
