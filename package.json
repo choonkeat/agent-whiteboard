@@ -1,6 +1,6 @@
 {
   "name": "@choonkeat/agent-whiteboard",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Turtle-graphics-inspired animated whiteboard for AI agents with hand-drawn aesthetics",
   "type": "module",
   "main": "./dist/agent-whiteboard.umd.cjs",
@@ -49,12 +49,12 @@
     "vite-plugin-dts": "^3.9.0"
   },
   "optionalDependencies": {
-    "@choonkeat/agent-whiteboard-linux-x64": "0.1.0",
-    "@choonkeat/agent-whiteboard-linux-arm64": "0.1.0",
-    "@choonkeat/agent-whiteboard-darwin-x64": "0.1.0",
-    "@choonkeat/agent-whiteboard-darwin-arm64": "0.1.0",
-    "@choonkeat/agent-whiteboard-win32-x64": "0.1.0",
-    "@choonkeat/agent-whiteboard-win32-arm64": "0.1.0"
+    "@choonkeat/agent-whiteboard-linux-x64": "0.2.0",
+    "@choonkeat/agent-whiteboard-linux-arm64": "0.2.0",
+    "@choonkeat/agent-whiteboard-darwin-x64": "0.2.0",
+    "@choonkeat/agent-whiteboard-darwin-arm64": "0.2.0",
+    "@choonkeat/agent-whiteboard-win32-x64": "0.2.0",
+    "@choonkeat/agent-whiteboard-win32-arm64": "0.2.0"
   },
   "dependencies": {
     "roughjs": "^4.6.6"
