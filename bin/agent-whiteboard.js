@@ -31,7 +31,7 @@ if (!platform || !arch) {
   process.exit(1);
 }
 
-const pkgName = `@agent-whiteboard/${platform}-${arch}`;
+const pkgName = `@choonkeat/agent-whiteboard-${platform}-${arch}`;
 const binName = process.platform === "win32" ? "agent-whiteboard.exe" : "agent-whiteboard";
 
 let binPath;
@@ -48,7 +48,8 @@ try {
       `Could not find package ${pkgName}.\n` +
         `Make sure it is installed — this usually means your platform is supported\n` +
         `but the optional dependency was not installed.\n\n` +
-        `Try: npm install ${pkgName}`
+        `Try: npm install ${pkgName}\n` +
+        `Or run: npx @choonkeat/agent-whiteboard`
     );
     process.exit(1);
   }

@@ -56,7 +56,7 @@ for target in "${TARGETS[@]}"; do
 
   cat > "$pkg_dir/package.json" <<PKGJSON
 {
-  "name": "@agent-whiteboard/${pkg_suffix}",
+  "name": "@choonkeat/agent-whiteboard-${pkg_suffix}",
   "version": "${VERSION}",
   "description": "agent-whiteboard binary for ${goos}/${goarch}",
   "license": "MIT",

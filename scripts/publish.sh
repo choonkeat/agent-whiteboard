@@ -24,7 +24,7 @@ for platform in "${PLATFORMS[@]}"; do
     echo "ERROR: Missing $pkg_dir — run scripts/build-platforms.sh first"
     exit 1
   fi
-  echo "→ Publishing @agent-whiteboard/${platform}…"
+  echo "→ Publishing @choonkeat/agent-whiteboard-${platform}…"
   npm publish "$pkg_dir" --access public $PUBLISH_ARGS
 done
 
