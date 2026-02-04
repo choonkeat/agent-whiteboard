@@ -10,10 +10,6 @@ mcp-server-go/dist/
 # npm platform packages (generated)
 npm-platforms/
 
-# Scratch files
-PLAN.md
-TODO.md
-
 # Local / editor
 .mcp.json
 .playwright-mcp/

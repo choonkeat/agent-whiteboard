@@ -6,17 +6,10 @@ Built with [Rough.js](https://roughjs.com/) for a sketchy, hand-drawn look and p
 
 ## Quick Start
 
-### 1. Build the server
+### 1. Install into Claude Code (stdio + HTTP)
 
 ```bash
-cd mcp-server-go
-go build -o agent-whiteboard .
-```
-
-### 2. Install into Claude Code (stdio + HTTP)
-
-```bash
-claude mcp add whiteboard -- /path/to/agent-whiteboard
+claude mcp add whiteboard -- npx agent-whiteboard
 ```
 
 To use a fixed port for the browser UI (instead of a random ephemeral port), export `PORT` in your shell before launching Claude Code:
@@ -27,7 +20,7 @@ export PORT=3005
 
 Restart Claude Code, then verify with `/mcp` — you should see the `draw` and `clear` tools.
 
-### 3. Connect via HTTP MCP (alternative)
+### 2. Connect via HTTP MCP (alternative)
 
 The server always exposes an HTTP MCP endpoint. You can connect any MCP client to it:
 
@@ -35,23 +28,23 @@ The server always exposes an HTTP MCP endpoint. You can connect any MCP client t
 claude mcp add --transport http whiteboard http://localhost:3005/mcp
 ```
 
-### 4. Standalone server (no stdio)
+### 3. Standalone server (no stdio)
 
 Run the server without stdio MCP — useful for hosting a shared whiteboard:
 
 ```bash
-PORT=3005 ./agent-whiteboard --no-stdio-mcp
+PORT=3005 npx agent-whiteboard --no-stdio-mcp
 ```
 
-### 5. Connect to a remote whiteboard
+### 4. Connect to a remote whiteboard
 
 Point an agent at an existing whiteboard instance via WebSocket:
 
 ```bash
-claude mcp add whiteboard -- /path/to/agent-whiteboard --ws ws://host:3005/ws
+claude mcp add whiteboard -- npx agent-whiteboard --ws ws://host:3005/ws
 ```
 
-### 6. Uninstall
+### 5. Uninstall
 
 ```bash
 claude mcp remove whiteboard
@@ -161,13 +154,16 @@ The `draw` tool blocks until the viewer responds (or a 5-minute timeout). Viewer
 ## Development
 
 ```bash
-# Build the browser client (output goes to mcp-server-go/mcp-client-dist/)
 npm install
+
+# Build the browser client (output goes to mcp-server-go/mcp-client-dist/)
 npm run build:mcp-client
 
-# Build the Go server
-cd mcp-server-go
-go build -o agent-whiteboard .
+# Build the Go server (output goes to mcp-server-go/dist/)
+cd mcp-server-go && make build
+
+# Or cross-compile all platform binaries for npm distribution
+bash scripts/build-platforms.sh
 ```
 
 ## License

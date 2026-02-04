@@ -22,7 +22,6 @@
     "mcp-client-dist"
   ],
   "scripts": {
-    "dev": "vite serve demo",
     "build": "vite build && vite build --config vite.dropin.config.ts",
     "build:lib": "vite build",
     "build:dropin": "vite build --config vite.dropin.config.ts",
