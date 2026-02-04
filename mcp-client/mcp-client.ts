@@ -1,4 +1,5 @@
 import { AgentWhiteboard } from '../src/index.js';
+import { validateInstructions, formatValidationErrors } from './validate-instructions.js';
 
 const canvas = document.getElementById('whiteboard') as HTMLCanvasElement;
 const canvasWrap = document.getElementById('canvas-wrap') as HTMLDivElement;
@@ -11,6 +12,7 @@ const sendBtn = document.getElementById('btn-send') as HTMLButtonElement;
 const statusDot = document.getElementById('status-dot') as HTMLSpanElement;
 
 let pendingAckId: string | null = null;
+let pendingValidationErrors: string | null = null;
 let activeWs: WebSocket | null = null;
 let idleTimer: ReturnType<typeof setTimeout> | null = null;
 const IDLE_TIMEOUT = 30_000; // 30s without a new message → session idle
@@ -228,8 +230,13 @@ function hideTyping(): void {
 function sendAck(id: string, message: string): void {
   if (activeWs && activeWs.readyState === WebSocket.OPEN) {
     const msg: Record<string, string> = { type: 'ack', id };
-    if (message) {
-      msg.message = message;
+    let fullMessage = message;
+    if (pendingValidationErrors) {
+      fullMessage = pendingValidationErrors + (fullMessage ? '\n' + fullMessage : '');
+      pendingValidationErrors = null;
+    }
+    if (fullMessage) {
+      msg.message = fullMessage;
     }
     activeWs.send(JSON.stringify(msg));
   }
@@ -341,21 +348,30 @@ function connect(): void {
         setStatus('connected');
         break;
 
-      case 'draw':
-        console.log(`[${ts()}] Draw received: ${data.instructions.length} instructions`);
+      case 'draw': {
+        const rawInstructions: unknown[] = data.instructions;
+        const { valid, errors } = validateInstructions(rawInstructions);
+        console.log(`[${ts()}] Draw received: ${rawInstructions.length} instructions (${valid.length} valid, ${errors.length} invalid)`);
         clearIdleTimer();
         isWelcomeScreen = false;
         hideTyping();
-        currentInstructions = data.instructions;
-        board.addInstructions(data.instructions);
+        currentInstructions = valid;
+        board.addInstructions(valid);
         if (data.slide && data.totalSlides) {
           addSystemMessage(`Slide ${data.slide} of ${data.totalSlides}`);
+        }
+        if (errors.length > 0) {
+          addSystemMessage(`Warning: ${errors.length} of ${rawInstructions.length} instructions were invalid and skipped`);
+          pendingValidationErrors = formatValidationErrors(errors, rawInstructions.length);
+        } else {
+          pendingValidationErrors = null;
         }
         if (data.ack_id) {
           pendingAckId = data.ack_id;
           // enableInput() will be called by onQueueEmpty when animation finishes
         }
         break;
+      }
 
       case 'caption':
         console.log(`[${ts()}] Caption received: "${data.text}"`);
