@@ -9,7 +9,7 @@ Built with [Rough.js](https://roughjs.com/) for a sketchy, hand-drawn look and p
 ### 1. Install into Claude Code (stdio + HTTP)
 
 ```bash
-claude mcp add whiteboard -- npx @choonkeat/agent-whiteboard
+claude mcp add whiteboard -- npx --yes @choonkeat/agent-whiteboard
 ```
 
 To use a fixed port for the browser UI (instead of a random ephemeral port), export `PORT` in your shell before launching Claude Code:
@@ -33,7 +33,7 @@ claude mcp add --transport http whiteboard http://localhost:3005/mcp
 Run the server without stdio MCP — useful for hosting a shared whiteboard:
 
 ```bash
-PORT=3005 npx @choonkeat/agent-whiteboard --no-stdio-mcp
+PORT=3005 npx --yes @choonkeat/agent-whiteboard --no-stdio-mcp
 ```
 
 ### 4. Connect to a remote whiteboard
@@ -41,7 +41,7 @@ PORT=3005 npx @choonkeat/agent-whiteboard --no-stdio-mcp
 Point an agent at an existing whiteboard instance via WebSocket:
 
 ```bash
-claude mcp add whiteboard -- npx @choonkeat/agent-whiteboard --ws ws://host:3005/ws
+claude mcp add whiteboard -- npx --yes @choonkeat/agent-whiteboard --ws ws://host:3005/ws
 ```
 
 ### 5. Uninstall
