@@ -1,6 +1,10 @@
-.PHONY: build publish publish-dry
+.PHONY: build publish publish-dry test
+
+test:
+	$(MAKE) -C mcp-server-go test
 
 build:
+	$(MAKE) -C mcp-server-go build
 	./scripts/build-platforms.sh
 
 publish-dry: build

@@ -159,6 +159,16 @@ func registerTools(server *mcp.Server, bus *EventBus) {
 		Name:        "draw",
 		Description: "Set a caption and queue drawing instructions on the whiteboard, then wait for the viewer to click Continue before returning.",
 	}, func(ctx context.Context, req *mcp.CallToolRequest, params *DrawParams) (*mcp.CallToolResult, any, error) {
+		// Lazily start HTTP server + open browser on first draw
+		if err := ensureHTTPServer(); err != nil {
+			return nil, nil, fmt.Errorf("failed to start whiteboard server: %w", err)
+		}
+
+		// Re-open browser on new presentation (slide 1)
+		if params.Slide <= 1 && uiURL != "" {
+			openBrowser(uiURL)
+		}
+
 		// Wait for at least one viewer (browser) to be connected
 		bus.WaitForSubscriber()
 

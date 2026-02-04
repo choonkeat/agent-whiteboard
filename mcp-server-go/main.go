@@ -46,6 +46,36 @@ var upgrader = websocket.Upgrader{
 // uiURL is set once the HTTP server starts, used in tool results.
 var uiURL string
 
+// lazyStartOnce ensures the HTTP server is started at most once.
+var lazyStartOnce sync.Once
+var lazyStartErr error
+
+// remoteMode is set when --ws is used (no local HTTP server needed).
+var remoteMode bool
+
+// mcpServerRef holds a reference to the MCP server for lazy HTTP startup.
+var mcpServerRef *mcp.Server
+
+// ensureHTTPServer lazily starts the HTTP server and opens the browser on
+// first call. Subsequent calls are no-ops (the server stays running).
+func ensureHTTPServer() error {
+	if remoteMode {
+		return nil
+	}
+	lazyStartOnce.Do(func() {
+		url, err := startHTTPServer(mcpServerRef)
+		if err != nil {
+			lazyStartErr = err
+			return
+		}
+		uiURL = url
+		fmt.Fprintf(os.Stderr, "Agent Whiteboard UI: %s\n", uiURL)
+		fmt.Fprintf(os.Stderr, "MCP endpoint: POST %s/mcp\n", uiURL)
+		openBrowser(uiURL)
+	})
+	return lazyStartErr
+}
+
 func main() {
 	noStdio := flag.Bool("no-stdio-mcp", false, "disable stdio MCP transport (HTTP MCP is always available)")
 	wsURL := flag.String("ws", "", "connect as WebSocket client to a remote whiteboard instance (e.g. ws://host:3005/ws)")
@@ -55,22 +85,20 @@ func main() {
 		Name:    "agent-whiteboard",
 		Version: "0.1.0",
 	}, nil)
+	mcpServerRef = server
 	registerTools(server, bus)
 
 	if *wsURL != "" {
 		// WebSocket client mode: connect to remote whiteboard
+		remoteMode = true
 		go connectRemoteWS(*wsURL, bus)
-	} else {
-		// Local mode: start HTTP server with embedded UI + MCP endpoint
-		url, err := startHTTPServer(server)
-		if err != nil {
+	} else if *noStdio {
+		// HTTP-only mode: start server eagerly since that's the whole point
+		if err := ensureHTTPServer(); err != nil {
 			log.Fatalf("failed to start HTTP server: %v", err)
 		}
-		uiURL = url
-		fmt.Fprintf(os.Stderr, "Agent Whiteboard UI: %s\n", uiURL)
-		fmt.Fprintf(os.Stderr, "MCP endpoint: POST %s/mcp\n", uiURL)
-		openBrowser(uiURL)
 	}
+	// In normal stdio mode, HTTP server + browser are started lazily on first draw
 
 	if !*noStdio {
 		// Run MCP over stdio (blocks until client disconnects)
