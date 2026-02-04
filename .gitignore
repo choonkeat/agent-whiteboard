@@ -1,0 +1,22 @@
+node_modules/
+
+# Build output
+dist/
+mcp-client-dist/
+
+# Go binaries
+mcp-server-go/dist/
+
+# npm platform packages (generated)
+npm-platforms/
+
+# Scratch files
+PLAN.md
+TODO.md
+
+# Local / editor
+.mcp.json
+.playwright-mcp/
+.swe-swe/
+swe-swe/
+CONVO.txt

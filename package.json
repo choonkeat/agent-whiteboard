@@ -1,0 +1,60 @@
+{
+  "name": "agent-whiteboard",
+  "version": "0.1.0",
+  "description": "Turtle-graphics-inspired animated whiteboard for AI agents with hand-drawn aesthetics",
+  "type": "module",
+  "main": "./dist/agent-whiteboard.umd.cjs",
+  "module": "./dist/agent-whiteboard.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/agent-whiteboard.js",
+      "require": "./dist/agent-whiteboard.umd.cjs",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "bin": {
+    "agent-whiteboard": "bin/agent-whiteboard.js"
+  },
+  "files": [
+    "dist",
+    "bin",
+    "mcp-client-dist"
+  ],
+  "scripts": {
+    "dev": "vite serve demo",
+    "build": "vite build && vite build --config vite.dropin.config.ts",
+    "build:lib": "vite build",
+    "build:dropin": "vite build --config vite.dropin.config.ts",
+    "build:mcp-client": "vite build --config vite.mcp-client.config.ts",
+    "build:all": "npm run build && npm run build:mcp-client",
+    "prepublishOnly": "npm run build:all"
+  },
+  "keywords": [
+    "whiteboard",
+    "agent",
+    "turtle-graphics",
+    "canvas",
+    "rough.js",
+    "animation"
+  ],
+  "license": "MIT",
+  "devDependencies": {
+    "@types/node": "^25.2.0",
+    "terser": "^5.46.0",
+    "typescript": "^5.3.3",
+    "vite": "^5.4.0",
+    "vite-plugin-dts": "^3.9.0"
+  },
+  "optionalDependencies": {
+    "@agent-whiteboard/linux-x64": "0.1.0",
+    "@agent-whiteboard/linux-arm64": "0.1.0",
+    "@agent-whiteboard/darwin-x64": "0.1.0",
+    "@agent-whiteboard/darwin-arm64": "0.1.0",
+    "@agent-whiteboard/win32-x64": "0.1.0",
+    "@agent-whiteboard/win32-arm64": "0.1.0"
+  },
+  "dependencies": {
+    "roughjs": "^4.6.6"
+  }
+}

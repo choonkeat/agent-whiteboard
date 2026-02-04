@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Agent Whiteboard</title>
+  <link rel="stylesheet" href="./mcp-client.css" />
+</head>
+<body>
+  <div id="app">
+    <div id="canvas-wrap">
+      <canvas id="whiteboard"></canvas>
+    </div>
+    <div id="grab-bar"><div class="grab-line"></div></div>
+    <div id="chat">
+      <div id="messages"></div>
+      <div id="typing-indicator">
+        <div class="bubble agent"><span class="dots"></span></div>
+      </div>
+      <div id="quick-replies">
+        <button class="chip" data-message="Could you repeat that, but at a slower pace?">Repeat slower</button>
+        <button class="chip" data-message="Ok, but at a slower pace">Slower pace</button>
+        <button class="chip" data-message="Ok, but at a faster pace">Faster pace</button>
+        <button class="chip" data-message="Continue">Continue</button>
+      </div>
+      <div id="input-bar">
+        <span id="status-dot"></span>
+        <input id="chat-input" type="text" placeholder="Type a message or press Enter to continue..." disabled />
+        <button id="btn-send" disabled>Send</button>
+        <div id="download-wrap">
+          <button id="btn-download" title="Download session">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M8 2v8M8 10l-3-3M8 10l3-3M3 13h10"/>
+            </svg>
+          </button>
+          <div id="download-menu">
+            <button id="dl-json">Replay file (.json)</button>
+            <button id="dl-png">Current slide (.png)</button>
+            <button id="dl-all-png">All slides (.png)</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <script type="module" src="./mcp-client.ts"></script>
+</body>
+</html>

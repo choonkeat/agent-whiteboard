@@ -1,0 +1,119 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  background: #f5f3ee;
+  color: #333;
+  padding: 24px;
+}
+
+.container {
+  max-width: 960px;
+  margin: 0 auto;
+}
+
+h1 {
+  font-size: 28px;
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+
+.subtitle {
+  color: #777;
+  margin-bottom: 20px;
+  font-size: 14px;
+}
+
+.toolbar {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.toolbar button {
+  padding: 8px 18px;
+  border: 2px solid #333;
+  border-radius: 6px;
+  background: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, transform 0.1s;
+}
+
+.toolbar button:hover {
+  background: #eee;
+}
+
+.toolbar button:active {
+  transform: scale(0.97);
+}
+
+#btn-clear {
+  border-color: #c44;
+  color: #c44;
+}
+
+.canvas-wrapper {
+  border: 2px solid #ccc;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #fffef9;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+}
+
+canvas {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.json-section {
+  margin-top: 20px;
+}
+
+.json-section h3 {
+  font-size: 16px;
+  margin-bottom: 8px;
+}
+
+textarea {
+  width: 100%;
+  padding: 10px;
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  font-size: 13px;
+  border: 2px solid #ccc;
+  border-radius: 6px;
+  resize: vertical;
+  background: #fff;
+}
+
+#btn-run-json {
+  margin-top: 8px;
+  padding: 8px 18px;
+  border: 2px solid #2a7;
+  border-radius: 6px;
+  background: #fff;
+  color: #2a7;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+#btn-run-json:hover {
+  background: #eafaf0;
+}
+
+.status {
+  margin-top: 16px;
+  padding: 8px 14px;
+  background: #eee;
+  border-radius: 6px;
+  font-size: 13px;
+  color: #555;
+}
