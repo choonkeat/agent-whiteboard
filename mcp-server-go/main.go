@@ -46,9 +46,10 @@ var upgrader = websocket.Upgrader{
 // uiURL is set once the HTTP server starts, used in tool results.
 var uiURL string
 
-// lazyStartOnce ensures the HTTP server is started at most once.
-var lazyStartOnce sync.Once
-var lazyStartErr error
+// httpMu guards httpRunning and httpListener for crash-recovery restarts.
+var httpMu sync.Mutex
+var httpRunning bool
+var httpListener net.Listener
 
 // remoteMode is set when --ws is used (no local HTTP server needed).
 var remoteMode bool
@@ -56,24 +57,28 @@ var remoteMode bool
 // mcpServerRef holds a reference to the MCP server for lazy HTTP startup.
 var mcpServerRef *mcp.Server
 
-// ensureHTTPServer lazily starts the HTTP server and opens the browser on
-// first call. Subsequent calls are no-ops (the server stays running).
+// ensureHTTPServer lazily starts the HTTP server and opens the browser.
+// If the server has crashed since the last call, it restarts automatically.
 func ensureHTTPServer() error {
 	if remoteMode {
 		return nil
 	}
-	lazyStartOnce.Do(func() {
-		url, err := startHTTPServer(mcpServerRef)
-		if err != nil {
-			lazyStartErr = err
-			return
-		}
-		uiURL = url
-		fmt.Fprintf(os.Stderr, "Agent Whiteboard UI: %s\n", uiURL)
-		fmt.Fprintf(os.Stderr, "MCP endpoint: POST %s/mcp\n", uiURL)
-		openBrowser(uiURL)
-	})
-	return lazyStartErr
+	httpMu.Lock()
+	defer httpMu.Unlock()
+	if httpRunning {
+		return nil
+	}
+	url, ln, err := startHTTPServer(mcpServerRef)
+	if err != nil {
+		return err
+	}
+	uiURL = url
+	httpListener = ln
+	httpRunning = true
+	fmt.Fprintf(os.Stderr, "Agent Whiteboard UI: %s\n", uiURL)
+	fmt.Fprintf(os.Stderr, "MCP endpoint: POST %s/mcp\n", uiURL)
+	openBrowser(uiURL)
+	return nil
 }
 
 func main() {
@@ -115,11 +120,12 @@ func main() {
 }
 
 // startHTTPServer starts the HTTP server with the browser UI, WebSocket endpoint,
-// and StreamableHTTP MCP endpoint. Returns the base URL.
-func startHTTPServer(mcpServer *mcp.Server) (string, error) {
+// and StreamableHTTP MCP endpoint. Returns the base URL and the listener.
+// When http.Serve returns (server stopped), httpRunning is set to false.
+func startHTTPServer(mcpServer *mcp.Server) (string, net.Listener, error) {
 	staticSub, err := fs.Sub(staticFS, "mcp-client-dist")
 	if err != nil {
-		return "", fmt.Errorf("failed to create sub filesystem: %w", err)
+		return "", nil, fmt.Errorf("failed to create sub filesystem: %w", err)
 	}
 	fileServer := http.FileServer(http.FS(staticSub))
 
@@ -146,12 +152,18 @@ func startHTTPServer(mcpServer *mcp.Server) (string, error) {
 
 	ln, err := net.Listen("tcp", addr)
 	if err != nil {
-		return "", fmt.Errorf("listen error: %w", err)
+		return "", nil, fmt.Errorf("listen error: %w", err)
 	}
 	actualPort := ln.Addr().(*net.TCPAddr).Port
-	go http.Serve(ln, mux)
+	go func() {
+		http.Serve(ln, mux)
+		// Server stopped — mark as not running so next draw restarts it
+		httpMu.Lock()
+		httpRunning = false
+		httpMu.Unlock()
+	}()
 
-	return fmt.Sprintf("http://localhost:%d", actualPort), nil
+	return fmt.Sprintf("http://localhost:%d", actualPort), ln, nil
 }
 
 func openBrowser(url string) {

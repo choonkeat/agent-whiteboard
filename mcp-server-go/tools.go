@@ -63,7 +63,9 @@ func registerTools(server *mcp.Server, bus *EventBus) {
 		}
 
 		// Wait for at least one viewer (browser) to be connected
-		bus.WaitForSubscriber()
+		if err := bus.WaitForSubscriber(ctx); err != nil {
+			return nil, nil, fmt.Errorf("waiting for browser: %w", err)
+		}
 
 		ack := bus.CreateAck()
 
@@ -77,17 +79,30 @@ func registerTools(server *mcp.Server, bus *EventBus) {
 			TotalSlides:  params.TotalSlides,
 		})
 
-		result := <-ack.Ch
+		var result string
+		select {
+		case result = <-ack.Ch:
+		case <-ctx.Done():
+			return nil, nil, fmt.Errorf("draw cancelled: %w", ctx.Err())
+		}
 
 		var text string
+		isError := false
 		switch {
 		case result == "timeout":
 			text = "Viewer timed out."
+			isError = true
 		case result == "ack":
 			text = "Viewer acknowledged."
 		default:
 			// result is "ack:<message>"
-			text = "Viewer responded: " + result[len("ack:"):]
+			msg := result[len("ack:"):]
+			if strings.HasPrefix(msg, "VALIDATION ERRORS") {
+				text = msg
+				isError = true
+			} else {
+				text = "Viewer responded: " + msg
+			}
 		}
 		if uiURL != "" {
 			text += " Whiteboard UI: " + uiURL
@@ -97,6 +112,7 @@ func registerTools(server *mcp.Server, bus *EventBus) {
 			Content: []mcp.Content{
 				&mcp.TextContent{Text: text},
 			},
+			IsError: isError,
 		}, nil, nil
 	})
 

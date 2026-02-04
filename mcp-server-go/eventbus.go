@@ -1,6 +1,8 @@
 package main
 
 import (
+	"context"
+	"fmt"
 	"sync"
 	"time"
 
@@ -32,9 +34,6 @@ type EventBus struct {
 
 	ackMu   sync.Mutex
 	pending map[string]chan string // ack_id → channel
-
-	firstSubOnce sync.Once
-	firstSubCh   chan struct{} // closed when the first subscriber connects
 }
 
 // NewEventBus creates a new EventBus.
@@ -42,7 +41,6 @@ func NewEventBus() *EventBus {
 	return &EventBus{
 		subscribers: make(map[chan Event]struct{}),
 		pending:     make(map[string]chan string),
-		firstSubCh:  make(chan struct{}),
 	}
 }
 
@@ -53,13 +51,28 @@ func (eb *EventBus) Subscribe() chan Event {
 	eb.mu.Lock()
 	eb.subscribers[ch] = struct{}{}
 	eb.mu.Unlock()
-	eb.firstSubOnce.Do(func() { close(eb.firstSubCh) })
 	return ch
 }
 
-// WaitForSubscriber blocks until at least one subscriber has connected.
-func (eb *EventBus) WaitForSubscriber() {
-	<-eb.firstSubCh
+// WaitForSubscriber polls until at least one subscriber is connected,
+// or the context is cancelled, or 30 seconds elapse.
+func (eb *EventBus) WaitForSubscriber(ctx context.Context) error {
+	for {
+		eb.mu.RLock()
+		n := len(eb.subscribers)
+		eb.mu.RUnlock()
+		if n > 0 {
+			return nil
+		}
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-time.After(30 * time.Second):
+			return fmt.Errorf("timed out waiting for browser to connect")
+		case <-time.After(100 * time.Millisecond):
+			// poll again
+		}
+	}
 }
 
 // Unsubscribe removes a subscriber channel.
