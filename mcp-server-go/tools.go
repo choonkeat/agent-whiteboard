@@ -57,10 +57,16 @@ func registerTools(server *mcp.Server, bus *EventBus) {
 			return nil, nil, fmt.Errorf("failed to start whiteboard server: %w", err)
 		}
 
-		// Re-open browser on new presentation (slide 1)
-		if params.Slide <= 1 && uiURL != "" {
+		// Open browser on first slide if not already opened this session.
+		// This prevents opening multiple windows on retries after validation errors.
+		// Note: browserOpened is protected by httpMu in ensureHTTPServer.
+		httpMu.Lock()
+		shouldOpen := params.Slide <= 1 && uiURL != "" && !browserOpened
+		if shouldOpen {
 			openBrowser(uiURL)
+			browserOpened = true
 		}
+		httpMu.Unlock()
 
 		// Wait for at least one viewer (browser) to be connected
 		if err := bus.WaitForSubscriber(ctx); err != nil {

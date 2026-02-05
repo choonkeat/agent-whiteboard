@@ -46,6 +46,10 @@ var upgrader = websocket.Upgrader{
 // uiURL is set once the HTTP server starts, used in tool results.
 var uiURL string
 
+// browserOpened tracks whether we've already opened a browser this session.
+// This prevents opening multiple windows on retries after validation errors.
+var browserOpened bool
+
 // httpMu guards httpRunning and httpListener for crash-recovery restarts.
 var httpMu sync.Mutex
 var httpRunning bool
@@ -78,6 +82,7 @@ func ensureHTTPServer() error {
 	fmt.Fprintf(os.Stderr, "Agent Whiteboard UI: %s\n", uiURL)
 	fmt.Fprintf(os.Stderr, "MCP endpoint: POST %s/mcp\n", uiURL)
 	openBrowser(uiURL)
+	browserOpened = true
 	return nil
 }
 
