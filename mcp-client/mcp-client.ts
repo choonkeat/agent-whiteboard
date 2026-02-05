@@ -40,6 +40,7 @@ let lastSlideInfo = { slide: 0, totalSlides: 0 }; // Track for "last slide" dete
 let liveCanvasSnapshot = ''; // Store live canvas state when viewing history
 let pendingCaption = ''; // Caption waiting for slide info before rendering
 let completedSlide: SlideRecord | null = null; // Stashed until next draw promotes it to history
+let isDrawing = false; // True while board is animating instructions
 const downloadBtn = document.getElementById('btn-download') as HTMLButtonElement;
 
 function isLastSlide(): boolean {
@@ -76,7 +77,7 @@ function returnToLive(): void {
 function updateNavUI(): void {
   const hasHistory = sessionLog.length > 0;
 
-  if (!hasHistory) {
+  if (!hasHistory || isDrawing) {
     slideNav.classList.remove('visible');
     return;
   }
@@ -117,6 +118,8 @@ const board = new AgentWhiteboard(canvas, {
   backgroundColor: '#ffffff',
   onQueueEmpty: () => {
     console.log(`[${ts()}] Queue empty (drawing done)`);
+    isDrawing = false;
+    updateNavUI(); // Re-show nav now that drawing is done
     // Stash completed slide — it will be promoted to history when the next draw arrives
     if (!isWelcomeScreen && currentInstructions.length > 0) {
       completedSlide = {
@@ -300,6 +303,7 @@ function disableInput(): void {
   sendBtn.disabled = true;
   quickReplies.classList.remove('visible');
   quickRepliesEnd.classList.remove('visible');
+  slideNav.classList.remove('visible');
 }
 
 function showTyping(): void {
@@ -497,6 +501,8 @@ function connect(): void {
           totalSlides: data.totalSlides || 0,
         };
         currentInstructions = valid;
+        isDrawing = true;
+        updateNavUI(); // Hide nav while drawing
         board.addInstructions(valid);
         // Render caption with slide info as inline suffix
         if (pendingCaption) {
