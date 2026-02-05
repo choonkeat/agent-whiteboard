@@ -51,6 +51,26 @@ const REQUIRED_FIELDS: Record<string, Record<string, string>> = {
   wait: { duration: 'number' },
 };
 
+/** Example JSON for each instruction type (used in error messages to help agents self-correct) */
+const EXAMPLE_INSTRUCTIONS: Record<string, string> = {
+  moveTo: '{"type":"moveTo","x":100,"y":100}',
+  lineTo: '{"type":"lineTo","x":200,"y":200}',
+  forward: '{"type":"forward","distance":50}',
+  turnLeft: '{"type":"turnLeft","angle":90}',
+  turnRight: '{"type":"turnRight","angle":90}',
+  penUp: '{"type":"penUp"}',
+  penDown: '{"type":"penDown"}',
+  setColor: '{"type":"setColor","color":"#2196F3"}',
+  setStrokeWidth: '{"type":"setStrokeWidth","width":2}',
+  drawRect: '{"type":"drawRect","x":100,"y":100,"width":200,"height":80}',
+  drawCircle: '{"type":"drawCircle","x":200,"y":200,"radius":50}',
+  drawEllipse: '{"type":"drawEllipse","x":200,"y":200,"width":100,"height":60}',
+  writeText: '{"type":"writeText","text":"Hello","x":100,"y":100}',
+  label: '{"type":"label","text":"Label"}',
+  clear: '{"type":"clear"}',
+  wait: '{"type":"wait","duration":1000}',
+};
+
 /**
  * Suggest the closest valid type for a misspelled one.
  * Uses simple substring/prefix matching.
@@ -92,7 +112,12 @@ export function validateInstructions(raw: unknown[]): ValidationResult {
 
     // Must be a non-null object
     if (item === null || typeof item !== 'object' || Array.isArray(item)) {
-      errors.push({ index: i, type: item, message: 'instruction is not an object' });
+      errors.push({
+        index: i,
+        type: item,
+        message:
+          'instruction is not an object. Each instruction must be a JSON object like {"type":"moveTo","x":100,"y":100}',
+      });
       continue;
     }
 
@@ -100,7 +125,12 @@ export function validateInstructions(raw: unknown[]): ValidationResult {
 
     // Must have a type field
     if (!('type' in obj) || typeof obj.type !== 'string') {
-      errors.push({ index: i, type: undefined, message: 'missing or non-string "type" field' });
+      errors.push({
+        index: i,
+        type: undefined,
+        message:
+          'missing or non-string "type" field. Each instruction needs a "type" field, e.g. {"type":"drawRect","x":100,"y":100,"width":200,"height":80}',
+      });
       continue;
     }
 
@@ -109,7 +139,10 @@ export function validateInstructions(raw: unknown[]): ValidationResult {
     // Type must be valid
     if (!VALID_TYPES.has(typeName)) {
       const suggestion = suggestType(typeName);
-      const hint = suggestion ? `. Did you mean "${suggestion}"?` : '';
+      let hint = '';
+      if (suggestion) {
+        hint = `. Did you mean "${suggestion}"? Example: ${EXAMPLE_INSTRUCTIONS[suggestion]}`;
+      }
       errors.push({
         index: i,
         type: typeName,
@@ -120,13 +153,14 @@ export function validateInstructions(raw: unknown[]): ValidationResult {
 
     // Check required fields
     const fields = REQUIRED_FIELDS[typeName];
+    const example = EXAMPLE_INSTRUCTIONS[typeName];
     let fieldError = false;
     for (const [field, expectedType] of Object.entries(fields)) {
       if (!(field in obj)) {
         errors.push({
           index: i,
           type: typeName,
-          message: `missing required field "${field}" (expected ${expectedType})`,
+          message: `missing required field "${field}" (expected ${expectedType}). Example: ${example}`,
         });
         fieldError = true;
         break;
@@ -135,7 +169,7 @@ export function validateInstructions(raw: unknown[]): ValidationResult {
         errors.push({
           index: i,
           type: typeName,
-          message: `field "${field}" has type ${typeof obj[field]}, expected ${expectedType}`,
+          message: `field "${field}" has type ${typeof obj[field]}, expected ${expectedType}. Example: ${example}`,
         });
         fieldError = true;
         break;

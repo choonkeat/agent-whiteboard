@@ -7,11 +7,16 @@ Read this before drawing. These principles help humans actually understand your 
 ### 1. Gradual reveal (chunking)
 Never dump an entire diagram at once. Build concepts layer by layer across **multiple draw calls**. Each call adds one idea on top of what the viewer already sees. The viewer clicks Continue to advance, so they control the pace.
 
+**Canvas clearing behavior:**
+- `slide=1` (or omitted): Canvas is automatically cleared before drawing
+- `slide=2, 3, ...`: Canvas is NOT cleared — new elements are added on top of existing content
+- Use the `clear` tool explicitly if you need to clear mid-sequence
+
 Example — explaining a client-server architecture:
-- Draw call 1: Just the client box and a title
-- Draw call 2: Add the server box and the request arrow
-- Draw call 3: Add the database and the server→DB arrow
-- Draw call 4: Add response arrows and labels
+- Draw call 1 (slide=1): Just the client box and a title — canvas starts fresh
+- Draw call 2 (slide=2): Add the server box and the request arrow — builds on slide 1
+- Draw call 3 (slide=3): Add the database and the server→DB arrow — builds on slides 1-2
+- Draw call 4 (slide=4): Add response arrows and labels — complete diagram
 
 ### 2. One concept per slide
 Each draw call should communicate exactly one idea. If you need a caption that contains "and", you probably need two draw calls. Short captions beat long ones.

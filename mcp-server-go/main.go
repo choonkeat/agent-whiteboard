@@ -30,7 +30,7 @@ var bus = NewEventBus()
 var (
 	viewportMu     sync.RWMutex
 	viewportWidth  = 900
-	viewportHeight = 600
+	viewportHeight = 450 // Conservative default; browser canvas is typically 55vh (~450px)
 )
 
 func getViewport() (int, int) {

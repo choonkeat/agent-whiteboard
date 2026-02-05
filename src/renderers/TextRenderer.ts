@@ -56,15 +56,16 @@ export class TextRenderer {
   ): void {
     ctx.save();
     ctx.font = `${fontSize}px ${font}`;
-    ctx.textBaseline = 'top';
+    ctx.textBaseline = 'middle';
 
     // Draw semi-transparent background behind text
     const metrics = ctx.measureText(text);
     const padding = fontSize * 0.2;
+    const textHeight = fontSize * 1.2;
     const bgX = x - padding;
-    const bgY = y - padding;
+    const bgY = y - textHeight / 2 - padding;
     const bgW = metrics.width + padding * 2;
-    const bgH = fontSize * 1.3 + padding * 2;
+    const bgH = textHeight + padding * 2;
     ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
     ctx.fillRect(bgX, bgY, bgW, bgH);
 

@@ -31,8 +31,10 @@ All instructions are JSON objects with a `type` field plus type-specific paramet
 ## Text
 | type | params | description |
 |------|--------|-------------|
-| writeText | text, x, y, fontSize?, font? | Draw text at absolute position |
+| writeText | text, x, y, fontSize?, font? | Draw text at (x, y) where y is vertical center of text |
 | label | text, offsetX?, offsetY?, fontSize? | Draw text near current turtle position |
+
+**Text centering:** The y coordinate specifies the vertical center of the text. To center text in a box at (bx, by, width, height), use y = by + height/2.
 
 ## Control
 | type | params | description |
