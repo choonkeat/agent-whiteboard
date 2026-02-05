@@ -7,6 +7,11 @@ const grabBar = document.getElementById('grab-bar') as HTMLDivElement;
 const messagesEl = document.getElementById('messages') as HTMLDivElement;
 const typingIndicator = document.getElementById('typing-indicator') as HTMLDivElement;
 const quickReplies = document.getElementById('quick-replies') as HTMLDivElement;
+const quickRepliesEnd = document.getElementById('quick-replies-end') as HTMLDivElement;
+const slideNav = document.getElementById('slide-nav') as HTMLDivElement;
+const navBack = document.getElementById('nav-back') as HTMLButtonElement;
+const navForward = document.getElementById('nav-forward') as HTMLButtonElement;
+const slideIndicator = document.getElementById('slide-indicator') as HTMLSpanElement;
 const chatInput = document.getElementById('chat-input') as HTMLInputElement;
 const sendBtn = document.getElementById('btn-send') as HTMLButtonElement;
 const statusDot = document.getElementById('status-dot') as HTMLSpanElement;
@@ -30,7 +35,64 @@ const sessionLog: SlideRecord[] = [];
 let currentCaption = '';
 let currentInstructions: unknown[] = [];
 let isWelcomeScreen = false;
+let viewingSlideIndex = -1; // -1 = live view, 0+ = viewing history
+let lastSlideInfo = { slide: 0, totalSlides: 0 }; // Track for "last slide" detection
+let liveCanvasSnapshot = ''; // Store live canvas state when viewing history
 const downloadBtn = document.getElementById('btn-download') as HTMLButtonElement;
+
+function isLastSlide(): boolean {
+  return lastSlideInfo.slide > 0 &&
+         lastSlideInfo.slide === lastSlideInfo.totalSlides;
+}
+
+function showSlideSnapshot(index: number): void {
+  if (index < 0 || index >= sessionLog.length) return;
+  const snapshot = sessionLog[index].snapshot;
+  const img = new Image();
+  img.onload = () => {
+    const ctx = canvas.getContext('2d')!;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.drawImage(img, 0, 0);
+  };
+  img.src = snapshot;
+}
+
+function returnToLive(): void {
+  viewingSlideIndex = -1;
+  if (liveCanvasSnapshot) {
+    const img = new Image();
+    img.onload = () => {
+      const ctx = canvas.getContext('2d')!;
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.drawImage(img, 0, 0);
+    };
+    img.src = liveCanvasSnapshot;
+  }
+  updateNavUI();
+}
+
+function updateNavUI(): void {
+  const hasHistory = sessionLog.length > 0;
+
+  if (!hasHistory) {
+    slideNav.classList.remove('visible');
+    return;
+  }
+
+  slideNav.classList.add('visible');
+
+  if (viewingSlideIndex === -1) {
+    // Live view
+    navBack.disabled = !hasHistory;
+    navForward.disabled = true;
+    slideIndicator.textContent = 'Live';
+  } else {
+    // Viewing history
+    navBack.disabled = viewingSlideIndex === 0;
+    navForward.disabled = false; // Can always go forward to live
+    slideIndicator.textContent = `Slide ${viewingSlideIndex + 1}/${sessionLog.length}`;
+  }
+}
 
 function ts(): string {
   return new Date().toISOString();
@@ -46,15 +108,18 @@ const board = new AgentWhiteboard(canvas, {
     console.log(`[${ts()}] Queue empty (drawing done)`);
     // Don't capture welcome screen in session log
     if (!isWelcomeScreen && currentInstructions.length > 0) {
+      const snapshot = canvas.toDataURL('image/png');
       sessionLog.push({
         instructions: currentInstructions,
         caption: currentCaption,
-        snapshot: canvas.toDataURL('image/png'),
+        snapshot,
         timestamp: Date.now(),
       });
+      liveCanvasSnapshot = snapshot;
       currentInstructions = [];
       currentCaption = '';
       downloadBtn.classList.add('visible');
+      updateNavUI();
     }
     if (pendingAckId) {
       enableInput();
@@ -204,7 +269,14 @@ function addSystemMessage(text: string): void {
 function enableInput(): void {
   chatInput.disabled = false;
   sendBtn.disabled = false;
-  quickReplies.classList.add('visible');
+  // Show different quick-replies on last slide
+  if (isLastSlide()) {
+    quickReplies.classList.remove('visible');
+    quickRepliesEnd.classList.add('visible');
+  } else {
+    quickReplies.classList.add('visible');
+    quickRepliesEnd.classList.remove('visible');
+  }
   typingIndicator.classList.remove('visible');
   chatInput.focus();
 }
@@ -213,6 +285,7 @@ function disableInput(): void {
   chatInput.disabled = true;
   sendBtn.disabled = true;
   quickReplies.classList.remove('visible');
+  quickRepliesEnd.classList.remove('visible');
 }
 
 function showTyping(): void {
@@ -278,6 +351,51 @@ quickReplies.addEventListener('click', (e) => {
   chatInput.value = '';
   disableInput();
   showTyping();
+});
+
+// Quick-reply chips for last slide ("Ok thanks")
+quickRepliesEnd.addEventListener('click', (e) => {
+  const chip = (e.target as HTMLElement).closest('.chip') as HTMLButtonElement | null;
+  if (!chip || chip.disabled || !pendingAckId) return;
+
+  const message = chip.dataset.message || '';
+  if (message) {
+    addUserMessage(message);
+  }
+  sendAck(pendingAckId, message);
+  pendingAckId = null;
+  chatInput.value = '';
+  disableInput();
+  showTyping();
+});
+
+// --- Slide navigation ---
+
+navBack.addEventListener('click', () => {
+  if (sessionLog.length === 0) return;
+
+  if (viewingSlideIndex === -1) {
+    // Entering history from live view — save live state
+    liveCanvasSnapshot = canvas.toDataURL('image/png');
+    viewingSlideIndex = sessionLog.length - 1;
+  } else if (viewingSlideIndex > 0) {
+    viewingSlideIndex--;
+  }
+  showSlideSnapshot(viewingSlideIndex);
+  updateNavUI();
+});
+
+navForward.addEventListener('click', () => {
+  if (viewingSlideIndex === -1) return; // Already at live
+
+  if (viewingSlideIndex < sessionLog.length - 1) {
+    viewingSlideIndex++;
+    showSlideSnapshot(viewingSlideIndex);
+    updateNavUI();
+  } else {
+    // At last history slide, go to live
+    returnToLive();
+  }
 });
 
 // --- Connection status ---
@@ -355,10 +473,21 @@ function connect(): void {
         clearIdleTimer();
         isWelcomeScreen = false;
         hideTyping();
+        // Auto-return to live view when agent draws new content
+        viewingSlideIndex = -1;
+        // Store slide info for last slide detection
+        lastSlideInfo = {
+          slide: data.slide || 0,
+          totalSlides: data.totalSlides || 0,
+        };
         currentInstructions = valid;
         board.addInstructions(valid);
         if (data.slide && data.totalSlides) {
           addSystemMessage(`Slide ${data.slide} of ${data.totalSlides}`);
+        }
+        // Add "The end" message on last slide
+        if (isLastSlide()) {
+          addSystemMessage('The end. Any questions?');
         }
         if (errors.length > 0) {
           addSystemMessage(`Warning: ${errors.length} of ${rawInstructions.length} instructions were invalid and skipped`);
