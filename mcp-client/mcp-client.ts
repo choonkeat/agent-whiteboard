@@ -38,6 +38,8 @@ let isWelcomeScreen = false;
 let viewingSlideIndex = -1; // -1 = live view, 0+ = viewing history
 let lastSlideInfo = { slide: 0, totalSlides: 0 }; // Track for "last slide" detection
 let liveCanvasSnapshot = ''; // Store live canvas state when viewing history
+let pendingCaption = ''; // Caption waiting for slide info before rendering
+let completedSlide: SlideRecord | null = null; // Stashed until next draw promotes it to history
 const downloadBtn = document.getElementById('btn-download') as HTMLButtonElement;
 
 function isLastSlide(): boolean {
@@ -94,6 +96,15 @@ function updateNavUI(): void {
   }
 }
 
+// Promote the stashed completed slide into history.
+// Called when new content arrives, so the previous slide becomes "past".
+function promoteCompletedSlide(): void {
+  if (!completedSlide) return;
+  sessionLog.push(completedSlide);
+  completedSlide = null;
+  updateNavUI();
+}
+
 function ts(): string {
   return new Date().toISOString();
 }
@@ -106,20 +117,17 @@ const board = new AgentWhiteboard(canvas, {
   backgroundColor: '#ffffff',
   onQueueEmpty: () => {
     console.log(`[${ts()}] Queue empty (drawing done)`);
-    // Don't capture welcome screen in session log
+    // Stash completed slide — it will be promoted to history when the next draw arrives
     if (!isWelcomeScreen && currentInstructions.length > 0) {
-      const snapshot = canvas.toDataURL('image/png');
-      sessionLog.push({
+      completedSlide = {
         instructions: currentInstructions,
         caption: currentCaption,
-        snapshot,
+        snapshot: canvas.toDataURL('image/png'),
         timestamp: Date.now(),
-      });
-      liveCanvasSnapshot = snapshot;
+      };
       currentInstructions = [];
       currentCaption = '';
       downloadBtn.classList.add('visible');
-      updateNavUI();
     }
     if (pendingAckId) {
       enableInput();
@@ -244,16 +252,22 @@ showWelcome();
 
 // --- Chat message helpers ---
 
-function addBubble(text: string, type: 'agent' | 'user' | 'system'): void {
+function addBubble(text: string, type: 'agent' | 'user' | 'system', suffix?: string): void {
   const div = document.createElement('div');
   div.className = `bubble ${type}`;
   div.textContent = text;
+  if (suffix) {
+    const span = document.createElement('span');
+    span.className = 'bubble-suffix';
+    span.textContent = suffix;
+    div.appendChild(span);
+  }
   messagesEl.appendChild(div);
   messagesEl.scrollTop = messagesEl.scrollHeight;
 }
 
-function addAgentMessage(text: string): void {
-  addBubble(text, 'agent');
+function addAgentMessage(text: string, suffix?: string): void {
+  addBubble(text, 'agent', suffix);
 }
 
 function addUserMessage(text: string): void {
@@ -467,6 +481,8 @@ function connect(): void {
         break;
 
       case 'draw': {
+        // Promote previous slide to history before drawing new content
+        promoteCompletedSlide();
         const rawInstructions: unknown[] = data.instructions;
         const { valid, errors } = validateInstructions(rawInstructions);
         console.log(`[${ts()}] Draw received: ${rawInstructions.length} instructions (${valid.length} valid, ${errors.length} invalid)`);
@@ -482,12 +498,17 @@ function connect(): void {
         };
         currentInstructions = valid;
         board.addInstructions(valid);
-        if (data.slide && data.totalSlides) {
-          addSystemMessage(`Slide ${data.slide} of ${data.totalSlides}`);
-        }
-        // Add "The end" message on last slide
-        if (isLastSlide()) {
-          addSystemMessage('The end. Any questions?');
+        // Render caption with slide info as inline suffix
+        if (pendingCaption) {
+          let suffix = '';
+          if (data.slide && data.totalSlides) {
+            suffix = `${data.slide}/${data.totalSlides}`;
+          }
+          if (isLastSlide()) {
+            suffix += suffix ? ' · fin' : 'fin';
+          }
+          addAgentMessage(pendingCaption, suffix || undefined);
+          pendingCaption = '';
         }
         if (errors.length > 0) {
           addSystemMessage(`Warning: ${errors.length} of ${rawInstructions.length} instructions were invalid and skipped`);
@@ -511,9 +532,8 @@ function connect(): void {
         console.log(`[${ts()}] Caption received: "${data.text}"`);
         clearIdleTimer();
         currentCaption = data.text || '';
-        if (data.text) {
-          addAgentMessage(data.text);
-        }
+        // Slide suffix is set by the draw handler (arrives after caption)
+        pendingCaption = data.text || '';
         break;
 
       case 'reset':
@@ -567,11 +587,22 @@ function downloadFile(blob: Blob, filename: string): void {
   URL.revokeObjectURL(url);
 }
 
+// Collect all slides: history + current live slide (if any)
+function allSlides(): SlideRecord[] {
+  const slides = [...sessionLog];
+  if (completedSlide) {
+    slides.push(completedSlide);
+  }
+  return slides;
+}
+
 document.getElementById('dl-json')!.addEventListener('click', () => {
+  const slides = allSlides();
+  if (slides.length === 0) return;
   const payload = {
     version: 1,
     exportedAt: new Date().toISOString(),
-    slides: sessionLog.map(({ instructions, caption, timestamp }) => ({
+    slides: slides.map(({ instructions, caption, timestamp }) => ({
       instructions,
       caption,
       timestamp,
@@ -583,28 +614,21 @@ document.getElementById('dl-json')!.addEventListener('click', () => {
 });
 
 document.getElementById('dl-png')!.addEventListener('click', () => {
-  if (sessionLog.length === 0) return;
-  const last = sessionLog[sessionLog.length - 1];
+  // Download current canvas directly
+  const dataUrl = canvas.toDataURL('image/png');
   const a = document.createElement('a');
-  a.href = last.snapshot;
-  a.download = `whiteboard-slide-${sessionLog.length}.png`;
+  a.href = dataUrl;
+  a.download = `whiteboard-current.png`;
   a.click();
   downloadMenu.classList.remove('visible');
 });
 
 document.getElementById('dl-all-png')!.addEventListener('click', () => {
-  if (sessionLog.length === 0) return;
-  if (sessionLog.length === 1) {
+  const slides = allSlides();
+  if (slides.length === 0) return;
+  for (let i = 0; i < slides.length; i++) {
     const a = document.createElement('a');
-    a.href = sessionLog[0].snapshot;
-    a.download = 'whiteboard-slide-1.png';
-    a.click();
-    downloadMenu.classList.remove('visible');
-    return;
-  }
-  for (let i = 0; i < sessionLog.length; i++) {
-    const a = document.createElement('a');
-    a.href = sessionLog[i].snapshot;
+    a.href = slides[i].snapshot;
     a.download = `whiteboard-slide-${i + 1}.png`;
     a.click();
   }

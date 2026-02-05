@@ -29,6 +29,7 @@ body {
 }
 
 #canvas-wrap {
+  position: relative;
   height: 55vh;
   min-height: 200px;
   max-height: 85vh;
@@ -123,6 +124,12 @@ canvas {
   padding: 0.2rem 0;
 }
 
+.bubble-suffix {
+  margin-left: 0.5rem;
+  font-size: 0.7rem;
+  color: #666;
+}
+
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(4px); }
   to { opacity: 1; transform: translateY(0); }
@@ -154,10 +161,14 @@ canvas {
 
 #slide-nav {
   display: none;
+  position: absolute;
+  bottom: 6px;
+  right: 8px;
   align-items: center;
-  justify-content: center;
-  gap: 0.75rem;
-  padding: 0.4rem 0;
+  gap: 0.5rem;
+  padding: 0.2rem 0.5rem;
+  background: rgba(26, 26, 46, 0.75);
+  border-radius: 6px;
 }
 
 #slide-nav.visible {
@@ -165,13 +176,13 @@ canvas {
 }
 
 .nav-btn {
-  width: 32px;
-  height: 32px;
+  width: 26px;
+  height: 26px;
   border: 1px solid #546e7a;
-  border-radius: 6px;
+  border-radius: 4px;
   background: transparent;
   color: #b0bec5;
-  font-size: 1rem;
+  font-size: 0.85rem;
   font-weight: bold;
   cursor: pointer;
   transition: background 0.15s, border-color 0.15s, color 0.15s;
@@ -189,9 +200,9 @@ canvas {
 }
 
 #slide-indicator {
-  font-size: 0.8rem;
+  font-size: 0.7rem;
   color: #90a4ae;
-  min-width: 70px;
+  min-width: 50px;
   text-align: center;
 }
 

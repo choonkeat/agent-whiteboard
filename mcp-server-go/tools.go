@@ -4,8 +4,10 @@ import (
 	"context"
 	_ "embed"
 	"fmt"
+	"reflect"
 	"strings"
 
+	"github.com/google/jsonschema-go/jsonschema"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
@@ -50,12 +52,41 @@ func quickReference(w, h int) string {
 	return r.Replace(quickReferenceMD)
 }
 
+// PreviousCanvas controls what happens to existing canvas content before drawing.
+type PreviousCanvas string
+
+const (
+	PreviousCanvasKeep    PreviousCanvas = "keep"
+	PreviousCanvasDiscard PreviousCanvas = "discard"
+)
+
 // DrawParams are the input parameters for the draw tool.
 type DrawParams struct {
-	Caption      string `json:"caption" jsonschema:"Text displayed below the canvas explaining this slide. Keep it short—one concept per slide. If your caption contains 'and', consider splitting into two slides."`
-	Instructions []any  `json:"instructions" jsonschema:"Array of drawing instructions. Each object MUST have a 'type' field (string) plus type-specific params. Common types: moveTo(x,y), lineTo(x,y), drawRect(x,y,width,height,fill?), drawCircle(x,y,radius,fill?), writeText(text,x,y,fontSize?), setColor(color). Example: [{\"type\":\"drawRect\",\"x\":100,\"y\":100,\"width\":200,\"height\":80,\"fill\":\"#E3F2FD\"},{\"type\":\"writeText\",\"text\":\"Client\",\"x\":140,\"y\":150}]. Full reference: whiteboard://instructions"`
-	Slide        int    `json:"slide,omitempty" jsonschema:"Current slide number (1-based). Use with totalSlides to show progress like '2/5'."`
-	TotalSlides  int    `json:"totalSlides,omitempty" jsonschema:"Total number of slides you plan to draw. Helps viewer know how much is left."`
+	PreviousCanvas PreviousCanvas `json:"previousCanvas" jsonschema:"What to do with existing canvas content. 'discard' clears the canvas before drawing (use for new diagrams or topic changes). 'keep' draws on top of existing content (use for gradual reveal, adding layers to a diagram)."`
+	Caption        string         `json:"caption" jsonschema:"Text displayed below the canvas explaining this slide. Keep it short—one concept per slide. If your caption contains 'and', consider splitting into two slides."`
+	Instructions   []any          `json:"instructions" jsonschema:"Array of drawing instructions. Each object MUST have a 'type' field (string) plus type-specific params. Common types: moveTo(x,y), lineTo(x,y), drawRect(x,y,width,height,fill?), drawCircle(x,y,radius,fill?), writeText(text,x,y,fontSize?), setColor(color). Example: [{\"type\":\"drawRect\",\"x\":100,\"y\":100,\"width\":200,\"height\":80,\"fill\":\"#E3F2FD\"},{\"type\":\"writeText\",\"text\":\"Client\",\"x\":140,\"y\":150}]. Full reference: whiteboard://instructions"`
+	Slide          int            `json:"slide,omitempty" jsonschema:"Current slide number (1-based). Use with totalSlides to show progress like '2/5'."`
+	TotalSlides    int            `json:"totalSlides,omitempty" jsonschema:"Total number of slides you plan to draw. Helps viewer know how much is left."`
+}
+
+// drawInputSchema returns a custom JSON schema for DrawParams with the
+// PreviousCanvas enum properly defined.
+func drawInputSchema() *jsonschema.Schema {
+	schema, err := jsonschema.ForType(
+		reflect.TypeFor[DrawParams](),
+		&jsonschema.ForOptions{
+			TypeSchemas: map[reflect.Type]*jsonschema.Schema{
+				reflect.TypeFor[PreviousCanvas](): {
+					Type: "string",
+					Enum: []any{"keep", "discard"},
+				},
+			},
+		},
+	)
+	if err != nil {
+		panic(fmt.Sprintf("failed to build DrawParams schema: %v", err))
+	}
+	return schema
 }
 
 // ClearParams are the input parameters for the clear tool (none).
@@ -89,6 +120,7 @@ COMMON TYPES: moveTo, lineTo, drawRect, drawCircle, writeText, setColor, penUp, 
 
 Read whiteboard://instructions for all 16 types with parameters.
 Read whiteboard://diagramming-guide for layout rules and cognitive principles.`,
+		InputSchema: drawInputSchema(),
 	}, func(ctx context.Context, req *mcp.CallToolRequest, params *DrawParams) (*mcp.CallToolResult, any, error) {
 		// Lazily start HTTP server + open browser on first draw
 		if err := ensureHTTPServer(); err != nil {
@@ -113,10 +145,7 @@ Read whiteboard://diagramming-guide for layout rules and cognitive principles.`,
 
 		ack := bus.CreateAck()
 
-		// Only auto-clear on first slide (or when slide not specified).
-		// This allows agents to add to existing diagrams on subsequent slides.
-		// Use the clear tool explicitly if you want to clear mid-sequence.
-		if params.Slide <= 1 {
+		if params.PreviousCanvas == PreviousCanvasDiscard {
 			bus.Publish(Event{Type: "reset"})
 		}
 		bus.Publish(Event{Type: "caption", Text: params.Caption})

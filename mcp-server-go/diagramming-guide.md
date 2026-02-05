@@ -7,16 +7,17 @@ Read this before drawing. These principles help humans actually understand your 
 ### 1. Gradual reveal (chunking)
 Never dump an entire diagram at once. Build concepts layer by layer across **multiple draw calls**. Each call adds one idea on top of what the viewer already sees. The viewer clicks Continue to advance, so they control the pace.
 
-**Canvas clearing behavior:**
-- `slide=1` (or omitted): Canvas is automatically cleared before drawing
-- `slide=2, 3, ...`: Canvas is NOT cleared — new elements are added on top of existing content
-- Use the `clear` tool explicitly if you need to clear mid-sequence
+**Canvas clearing — use `previousCanvas`:**
+- `"discard"`: Clears the canvas before drawing. Use for new diagrams or topic changes.
+- `"keep"`: Draws on top of existing content. Use for gradual reveal / layering.
+
+This is a required field with no default — you must make a conscious choice every time.
 
 Example — explaining a client-server architecture:
-- Draw call 1 (slide=1): Just the client box and a title — canvas starts fresh
-- Draw call 2 (slide=2): Add the server box and the request arrow — builds on slide 1
-- Draw call 3 (slide=3): Add the database and the server→DB arrow — builds on slides 1-2
-- Draw call 4 (slide=4): Add response arrows and labels — complete diagram
+- Draw call 1 (previousCanvas: "discard"): Just the client box and a title — fresh canvas
+- Draw call 2 (previousCanvas: "keep"): Add the server box and the request arrow — builds on slide 1
+- Draw call 3 (previousCanvas: "keep"): Add the database and the server→DB arrow — builds on slides 1-2
+- Draw call 4 (previousCanvas: "keep"): Add response arrows and labels — complete diagram
 
 ### 2. Annotate and highlight existing elements
 
@@ -42,7 +43,7 @@ Example — deep dive into the server component:
   - Building up a single diagram incrementally
   - Showing a sequence of events on the same structure
 
-- **Clear explicitly** (call `clear` tool, then draw with `slide=1`) when:
+- **Clear** (use `previousCanvas: "discard"`) when:
   - Switching to a completely different topic or diagram
   - The canvas is getting cluttered
   - You need space for new content that would overlap existing elements
@@ -122,7 +123,7 @@ No arrow primitive — draw arrowheads as two short lines from the tip. Rightwar
 
 ## Common mistakes
 - **Too much at once**: split across multiple draw calls, one concept each
-- **Forgetting to clear**: when switching topics (e.g., "problem" → "solution"), call `clear` first to avoid overlap
+- **Forgetting to clear**: when switching topics (e.g., "problem" → "solution"), use `previousCanvas: "discard"` to avoid overlap
 - **Overlapping text**: calculate positions; no two labels at the same Y
 - **Missing arrowheads**: every directed line needs two short arrowhead lines
 - **Tiny text**: never below fontSize 11; prefer 13+
