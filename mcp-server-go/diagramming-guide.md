@@ -18,13 +18,35 @@ Example — explaining a client-server architecture:
 - Draw call 3 (slide=3): Add the database and the server→DB arrow — builds on slides 1-2
 - Draw call 4 (slide=4): Add response arrows and labels — complete diagram
 
-### 2. One concept per slide
+### 2. Annotate and highlight existing elements
+
+A powerful whiteboarding technique: **draw over existing content** to add emphasis, annotations, or explanations. Don't redraw the whole diagram — just add the new elements.
+
+**Annotation techniques:**
+- **Circle important parts**: Draw a circle or ellipse around an element to draw attention to it
+- **Add callout labels**: Use `writeText` with a line pointing to the element being explained
+- **Highlight with color**: Draw a semi-transparent rectangle over an area, or change `setColor` and draw emphasis lines
+- **Underline key text**: Draw a line beneath important labels
+- **Add numbered markers**: Small circles with numbers (①②③) to indicate sequence or priority
+- **Draw connector lines**: Show relationships between elements with new arrows
+
+Example — deep dive into the server component:
+- Slide 1: Draw the full architecture (client → server → database)
+- Slide 2: Circle the server box and add a callout: "Let's zoom into this"
+- Slide 3: Add annotation arrows pointing to the server showing "handles auth", "validates input", "queries DB"
+- Slide 4: Highlight the server→DB arrow and add latency annotation "~50ms"
+
+**When to annotate vs. redraw:**
+- **Annotate** when explaining or emphasizing parts of an existing diagram
+- **Redraw** (use `clear` or `slide=1`) when switching to a completely different topic
+
+### 3. One concept per slide
 Each draw call should communicate exactly one idea. If you need a caption that contains "and", you probably need two draw calls. Short captions beat long ones.
 
-### 3. Spatial consistency
+### 4. Spatial consistency
 Place elements in consistent locations across draw calls. If the "Client" box is at the top-left in slide 1, keep it there in slide 2. Humans build spatial memory — moving things around forces them to re-orient.
 
-### 4. Viewer controls
+### 5. Viewer controls
 The viewer has quick-reply buttons and can also type free-form messages:
 - **Repeat slower**: viewer didn't follow the last slide — repeat the same concept but broken into smaller, simpler steps with fewer elements per draw call
 - **Slower pace**: viewer understood, but wants future slides to cover fewer concepts per draw call — simplify, break into smaller steps
