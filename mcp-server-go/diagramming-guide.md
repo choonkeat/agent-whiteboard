@@ -36,9 +36,19 @@ Example — deep dive into the server component:
 - Slide 3: Add annotation arrows pointing to the server showing "handles auth", "validates input", "queries DB"
 - Slide 4: Highlight the server→DB arrow and add latency annotation "~50ms"
 
-**When to annotate vs. redraw:**
-- **Annotate** when explaining or emphasizing parts of an existing diagram
-- **Redraw** (use `clear` or `slide=1`) when switching to a completely different topic
+**When to annotate vs. clear:**
+- **Annotate** (keep existing content) when:
+  - Adding emphasis or callouts to existing elements
+  - Building up a single diagram incrementally
+  - Showing a sequence of events on the same structure
+
+- **Clear explicitly** (call `clear` tool, then draw with `slide=1`) when:
+  - Switching to a completely different topic or diagram
+  - The canvas is getting cluttered
+  - You need space for new content that would overlap existing elements
+  - Moving from "problem" to "solution" — these deserve separate canvases
+
+**Common mistake:** Building a diagram incrementally, then adding unrelated content (like a summary or next topic) without clearing. Plan your layout: if new content won't fit cleanly, call `clear` first.
 
 ### 3. One concept per slide
 Each draw call should communicate exactly one idea. If you need a caption that contains "and", you probably need two draw calls. Short captions beat long ones.
@@ -112,6 +122,7 @@ No arrow primitive — draw arrowheads as two short lines from the tip. Rightwar
 
 ## Common mistakes
 - **Too much at once**: split across multiple draw calls, one concept each
+- **Forgetting to clear**: when switching topics (e.g., "problem" → "solution"), call `clear` first to avoid overlap
 - **Overlapping text**: calculate positions; no two labels at the same Y
 - **Missing arrowheads**: every directed line needs two short arrowhead lines
 - **Tiny text**: never below fontSize 11; prefer 13+
