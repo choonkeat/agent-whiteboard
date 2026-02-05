@@ -5,7 +5,6 @@ const canvas = document.getElementById('whiteboard') as HTMLCanvasElement;
 const canvasWrap = document.getElementById('canvas-wrap') as HTMLDivElement;
 const grabBar = document.getElementById('grab-bar') as HTMLDivElement;
 const messagesEl = document.getElementById('messages') as HTMLDivElement;
-const typingIndicator = document.getElementById('typing-indicator') as HTMLDivElement;
 const quickReplies = document.getElementById('quick-replies') as HTMLDivElement;
 const quickRepliesEnd = document.getElementById('quick-replies-end') as HTMLDivElement;
 const slideNav = document.getElementById('slide-nav') as HTMLDivElement;
@@ -54,8 +53,11 @@ function showSlideSnapshot(index: number): void {
   const img = new Image();
   img.onload = () => {
     const ctx = canvas.getContext('2d')!;
+    ctx.save();
+    ctx.setTransform(1, 0, 0, 1, 0, 0); // reset to identity for raw pixel copy
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.drawImage(img, 0, 0);
+    ctx.restore();
   };
   img.src = snapshot;
 }
@@ -66,8 +68,11 @@ function returnToLive(): void {
     const img = new Image();
     img.onload = () => {
       const ctx = canvas.getContext('2d')!;
+      ctx.save();
+      ctx.setTransform(1, 0, 0, 1, 0, 0); // reset to identity for raw pixel copy
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       ctx.drawImage(img, 0, 0);
+      ctx.restore();
     };
     img.src = liveCanvasSnapshot;
   }
@@ -294,7 +299,6 @@ function enableInput(): void {
     quickReplies.classList.add('visible');
     quickRepliesEnd.classList.remove('visible');
   }
-  typingIndicator.classList.remove('visible');
   chatInput.focus();
 }
 
@@ -307,13 +311,12 @@ function disableInput(): void {
 }
 
 function showTyping(): void {
-  typingIndicator.classList.add('visible');
-  messagesEl.scrollTop = messagesEl.scrollHeight;
+  sendBtn.classList.add('loading');
   startIdleTimer();
 }
 
 function hideTyping(): void {
-  typingIndicator.classList.remove('visible');
+  sendBtn.classList.remove('loading');
 }
 
 // --- Send ---

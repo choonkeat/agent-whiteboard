@@ -135,27 +135,6 @@ canvas {
   to { opacity: 1; transform: translateY(0); }
 }
 
-/* --- Typing indicator --- */
-
-#typing-indicator {
-  display: none;
-  padding: 0.2rem 0;
-}
-
-#typing-indicator.visible {
-  display: block;
-}
-
-.dots::after {
-  content: '...';
-  animation: dotPulse 1.2s ease-in-out infinite;
-  letter-spacing: 2px;
-}
-
-@keyframes dotPulse {
-  0%, 100% { opacity: 0.3; }
-  50% { opacity: 1; }
-}
 
 /* --- Slide navigation --- */
 
@@ -321,6 +300,24 @@ canvas {
 #btn-send:disabled {
   opacity: 0.3;
   cursor: not-allowed;
+}
+
+#btn-send.loading {
+  opacity: 1;
+  font-size: 0;
+  pointer-events: none;
+}
+
+#btn-send.loading::after {
+  content: '···';
+  font-size: 0.85rem;
+  letter-spacing: 2px;
+  animation: dotPulse 1.2s ease-in-out infinite;
+}
+
+@keyframes dotPulse {
+  0%, 100% { opacity: 0.3; }
+  50% { opacity: 1; }
 }
 
 /* --- Download button & menu --- */
