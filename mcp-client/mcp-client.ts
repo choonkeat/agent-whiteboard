@@ -576,11 +576,12 @@ function connect(): void {
         const { valid, errors } = validateInstructions(rawInstructions);
         console.log(`[${ts()}] Draw received: ${rawInstructions.length} instructions (${valid.length} valid, ${errors.length} invalid)`);
         
-        // Record draw event
+        // Record draw event (capture previousCanvas from websocket message)
         recordingsData.push({
           type: 'draw',
           timestamp: Date.now(),
           data: {
+            previousCanvas: data.previousCanvas || 'keep',
             instructions: valid,
             caption: data.caption || '',
             slide: data.slide || 0,
@@ -694,6 +695,9 @@ downloadBtn.addEventListener('click', async () => {
     // Clone the current DOM
     const clonedDoc = document.cloneNode(true) as Document;
     
+    // Remove swe-swe injected scripts
+    clonedDoc.querySelectorAll('script[src*="swe-swe"]').forEach(s => s.remove());
+    
     // Find and fetch CSS
     const cssLink = document.querySelector('link[rel="stylesheet"]') as HTMLLinkElement;
     const cssHref = cssLink?.href;
@@ -702,13 +706,17 @@ downloadBtn.addEventListener('click', async () => {
     const cssResponse = await fetch(cssHref);
     const cssText = await cssResponse.text();
     
-    // Find and fetch JS
-    const jsScript = document.querySelector('script[type="module"]') as HTMLScriptElement;
+    // Find and fetch JS (our bundled module)
+    const jsScript = document.querySelector('script[type="module"][src]') as HTMLScriptElement;
     const jsSrc = jsScript?.src;
     if (!jsSrc) throw new Error('JS script not found');
     
     const jsResponse = await fetch(jsSrc);
-    const jsText = await jsResponse.text();
+    let jsText = await jsResponse.text();
+    
+    // Remove import statements since we're inlining everything
+    jsText = jsText.replace(/^import\s+.+from\s+['"].+['"]\s*;?\s*$/gm, '');
+    jsText = jsText.replace(/^export\s+/gm, '');
     
     // Replace link with inline style
     const clonedCssLink = clonedDoc.querySelector('link[rel="stylesheet"]');
@@ -718,15 +726,15 @@ downloadBtn.addEventListener('click', async () => {
       clonedCssLink.replaceWith(styleEl);
     }
     
-    // Replace script with inline + recording data
-    const clonedJsScript = clonedDoc.querySelector('script[type="module"]');
-    if (clonedJsScript) {
-      const newScript = clonedDoc.createElement('script');
-      newScript.textContent = jsText + `\n\n// Replay data\nwindow.REPLAY_DATA = ${JSON.stringify(recordingsData)};\nif (window.REPLAY_DATA) { window.replayRecordings(window.REPLAY_DATA); }`;
-      clonedJsScript.replaceWith(newScript);
-    }
+    // Remove all script tags and replace with our inline version
+    clonedDoc.querySelectorAll('script').forEach(s => s.remove());
     
-    // Clear messages and canvas in cloned doc
+    // Add new inline script (NOT as module)
+    const newScript = clonedDoc.createElement('script');
+    newScript.textContent = jsText + `\n\n// Replay data\nwindow.REPLAY_DATA = ${JSON.stringify(recordingsData)};\nif (window.REPLAY_DATA && window.replayRecordings) { setTimeout(() => window.replayRecordings(window.REPLAY_DATA), 500); }`;
+    clonedDoc.body.appendChild(newScript);
+    
+    // Clear messages in cloned doc
     const clonedMessages = clonedDoc.getElementById('messages');
     if (clonedMessages) clonedMessages.innerHTML = '';
     
@@ -758,10 +766,25 @@ window.replayRecordings = async function(data: RecordingEvent[]) {
   downloadBtn.style.display = 'none';
   statusDot.style.display = 'none';
   
-  // Auto-play through all events
-  for (const event of data) {
+  let eventIndex = 0;
+  
+  const playNextEvent = async () => {
+    if (eventIndex >= data.length) {
+      console.log('[Replay] Replay complete');
+      return;
+    }
+    
+    const event = data[eventIndex];
+    eventIndex++;
+    
     if (event.type === 'draw') {
-      const { instructions, caption, slide, totalSlides } = event.data;
+      const { previousCanvas, instructions, caption, slide, totalSlides } = event.data;
+      
+      // Clear canvas if previousCanvas is 'discard'
+      if (previousCanvas === 'discard') {
+        promoteCompletedSlide();
+        board.clear();
+      }
       
       // Add caption as agent message
       let suffix = '';
@@ -773,6 +796,11 @@ window.replayRecordings = async function(data: RecordingEvent[]) {
       }
       addAgentMessage(caption, suffix || undefined);
       
+      // Store slide info for promotion
+      currentInstructions = instructions;
+      currentCaption = caption;
+      isDrawing = true;
+      
       // Draw instructions
       board.addInstructions(instructions);
       
@@ -781,18 +809,51 @@ window.replayRecordings = async function(data: RecordingEvent[]) {
         await new Promise(resolve => setTimeout(resolve, 100));
       }
       
-      // Small pause between slides
-      await new Promise(resolve => setTimeout(resolve, 500));
+      // Capture snapshot and promote to history
+      isDrawing = false;
+      const snapshot = canvas.toDataURL('image/png');
+      completedSlide = {
+        instructions: currentInstructions,
+        caption: currentCaption,
+        snapshot,
+        timestamp: Date.now(),
+      };
+      promoteCompletedSlide();
+      updateNavUI();
+      
+      // Wait for user to click Continue
+      if (eventIndex < data.length) {
+        const nextEvent = data[eventIndex];
+        const userReply = nextEvent.type === 'userMessage' ? nextEvent.data.text : 'Continue';
+        
+        // Show quick reply button with the actual user's response
+        quickReplies.classList.add('visible');
+        quickReplies.innerHTML = '';
+        const chip = document.createElement('button');
+        chip.className = 'chip';
+        chip.textContent = userReply;
+        chip.onclick = async () => {
+          quickReplies.classList.remove('visible');
+          if (nextEvent.type === 'userMessage') {
+            addUserMessage(nextEvent.data.text);
+            eventIndex++; // Skip the user message since we just added it
+          }
+          await new Promise(resolve => setTimeout(resolve, 300));
+          playNextEvent();
+        };
+        quickReplies.appendChild(chip);
+      }
       
     } else if (event.type === 'userMessage') {
-      addUserMessage(event.data.text);
-      await new Promise(resolve => setTimeout(resolve, 300));
+      // This gets handled by the click handler above
+      playNextEvent();
       
     } else if (event.type === 'agentMessage') {
       addAgentMessage(event.data.text, event.data.suffix);
       await new Promise(resolve => setTimeout(resolve, 300));
+      playNextEvent();
     }
-  }
+  };
   
-  console.log('[Replay] Replay complete');
+  playNextEvent();
 };
