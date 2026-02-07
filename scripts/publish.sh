@@ -4,12 +4,16 @@ set -euo pipefail
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 OUT_DIR="$REPO_ROOT/npm-platforms"
 DRY_RUN="${DRY_RUN:-true}"
+OTP="${NPM_OTP:-}"
 
 if [ "$DRY_RUN" = "true" ]; then
   PUBLISH_ARGS="--dry-run"
   echo "Dry-run mode (set DRY_RUN=false to publish for real)"
 else
   PUBLISH_ARGS=""
+  if [ -n "$OTP" ]; then
+    PUBLISH_ARGS="--otp=$OTP"
+  fi
   echo "Publishing for real!"
 fi
 
