@@ -692,6 +692,9 @@ downloadBtn.addEventListener('click', async () => {
   if (recordingsData.length === 0) return;
   
   try {
+    // Capture current app width
+    const appWidth = document.getElementById('app')?.offsetWidth || 1200;
+    
     // Clone the current DOM
     const clonedDoc = document.cloneNode(true) as Document;
     
@@ -704,7 +707,30 @@ downloadBtn.addEventListener('click', async () => {
     if (!cssHref) throw new Error('CSS link not found');
     
     const cssResponse = await fetch(cssHref);
-    const cssText = await cssResponse.text();
+    let cssText = await cssResponse.text();
+    
+    // Add replay-specific CSS for centering and scrolling
+    cssText += `\n\n/* Replay-specific styles */
+body {
+  overflow: auto !important;
+  min-height: 100vh;
+  height: auto !important;
+}
+
+#app {
+  width: ${appWidth}px !important;
+  max-width: 100% !important;
+  min-width: ${appWidth}px;
+  margin: 0 auto;
+  height: auto !important;
+}
+
+@media (max-width: ${appWidth}px) {
+  body {
+    overflow-x: scroll;
+  }
+}
+`;
     
     // Find and fetch JS (our bundled module)
     const jsScript = document.querySelector('script[type="module"][src]') as HTMLScriptElement;
