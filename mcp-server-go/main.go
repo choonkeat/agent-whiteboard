@@ -93,7 +93,7 @@ func main() {
 
 	server := mcp.NewServer(&mcp.Implementation{
 		Name:    "agent-whiteboard",
-		Version: "0.3.1",
+		Version: "0.3.2",
 	}, nil)
 	mcpServerRef = server
 	registerTools(server, bus)
