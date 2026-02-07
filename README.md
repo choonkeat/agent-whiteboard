@@ -1,6 +1,8 @@
-# Agent Whiteboard
+# Agent Whiteboard — The Humane Interface: How To Explain So Humans Will Listen
 
 Turtle-graphics-inspired animated whiteboard for AI agents with hand-drawn aesthetics. An agent calls MCP tools to draw on a canvas that a human watches in real time, responding via a chat interface to advance or give feedback.
+
+Built on cognitive principles: gradual reveal (chunking), viewer-controlled pacing, one concept per slide, and spatial consistency. Not just drawing—explaining in a way humans can actually understand.
 
 Built with [Rough.js](https://roughjs.com/) for a sketchy, hand-drawn look and progressive arc-length animation for smooth drawing.
 
