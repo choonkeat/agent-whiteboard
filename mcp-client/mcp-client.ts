@@ -514,159 +514,163 @@ const BACKOFF_MAX = 30000;
 let backoffDelay = BACKOFF_INITIAL;
 let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
 
-function teardown(): void {
-  if (activeWs) {
-    activeWs.onopen = null;
-    activeWs.onmessage = null;
-    activeWs.onclose = null;
-    activeWs.onerror = null;
-    activeWs.close();
-    activeWs = null;
-  }
-  if (reconnectTimer !== null) {
-    clearTimeout(reconnectTimer);
-    reconnectTimer = null;
-  }
-}
+// --- WebSocket connection (disabled in replay mode) ---
 
-function scheduleReconnect(): void {
-  if (reconnectTimer !== null) return;
-  reconnectTimer = setTimeout(() => {
-    reconnectTimer = null;
-    connect();
-  }, backoffDelay);
-  backoffDelay = Math.min(backoffDelay * 2, BACKOFF_MAX);
-}
-
-function connect(): void {
-  teardown();
-  setStatus('connecting');
-
-  const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
-  const wsUrl = `${proto}//${location.host}/ws`;
-  const ws = new WebSocket(wsUrl);
-  activeWs = ws;
-
-  ws.onopen = () => {
-    console.log(`[${ts()}] WebSocket onopen`);
-    setStatus('connected');
-    backoffDelay = BACKOFF_INITIAL;
-    // Report current viewport size to server
-    lastViewportW = 0;
-    lastViewportH = 0;
-    const dpr = window.devicePixelRatio || 1;
-    const rect = canvas.getBoundingClientRect();
-    sendViewportSize(Math.round(rect.width), Math.round(rect.height));
-  };
-
-  ws.onmessage = (event) => {
-    if (ws !== activeWs) return;
-    const data = JSON.parse(event.data);
-
-    switch (data.type) {
-      case 'connected':
-        console.log(`[${ts()}] Connected event received`);
-        setStatus('connected');
-        break;
-
-      case 'draw': {
-        // Promote previous slide to history before drawing new content
-        promoteCompletedSlide();
-        const rawInstructions: unknown[] = data.instructions;
-        const { valid, errors } = validateInstructions(rawInstructions);
-        console.log(`[${ts()}] Draw received: ${rawInstructions.length} instructions (${valid.length} valid, ${errors.length} invalid)`);
-        
-        // Record draw event (capture previousCanvas from websocket message)
-        recordingsData.push({
-          type: 'draw',
-          timestamp: Date.now(),
-          data: {
-            previousCanvas: data.previousCanvas || 'keep',
-            instructions: valid,
-            caption: data.caption || '',
-            slide: data.slide || 0,
-            totalSlides: data.totalSlides || 0,
-          }
-        });
-        
-        clearIdleTimer();
-        isWelcomeScreen = false;
-        hideTyping();
-        // Auto-return to live view when agent draws new content
-        viewingSlideIndex = -1;
-        // Store slide info for last slide detection
-        lastSlideInfo = {
-          slide: data.slide || 0,
-          totalSlides: data.totalSlides || 0,
-        };
-        currentInstructions = valid;
-        isDrawing = true;
-        updateNavUI(); // Hide nav while drawing
-        board.addInstructions(valid);
-        // Render caption with slide info as inline suffix
-        if (pendingCaption) {
-          let suffix = '';
-          if (data.slide && data.totalSlides) {
-            suffix = `${data.slide}/${data.totalSlides}`;
-          }
-          if (isLastSlide()) {
-            suffix += suffix ? ' · fin' : 'fin';
-          }
-          addAgentMessage(pendingCaption, suffix || undefined);
-          pendingCaption = '';
-        }
-        if (errors.length > 0) {
-          addSystemMessage(`Warning: ${errors.length} of ${rawInstructions.length} instructions were invalid and skipped`);
-          pendingValidationErrors = formatValidationErrors(errors, rawInstructions.length);
-        } else {
-          pendingValidationErrors = null;
-        }
-        if (data.ack_id) {
-          if (valid.length === 0 && errors.length > 0) {
-            // All instructions invalid — send errors back to agent immediately
-            sendAck(data.ack_id, '');
-          } else {
-            pendingAckId = data.ack_id;
-            // enableInput() will be called by onQueueEmpty when animation finishes
-          }
-        }
-        break;
-      }
-
-      case 'caption':
-        console.log(`[${ts()}] Caption received: "${data.text}"`);
-        clearIdleTimer();
-        currentCaption = data.text || '';
-        // Slide suffix is set by the draw handler (arrives after caption)
-        pendingCaption = data.text || '';
-        break;
-
-      case 'reset':
-        console.log(`[${ts()}] Reset received`);
-        board.reset();
-        pendingAckId = null;
-        disableInput();
-        hideTyping();
-        // Chat history persists — don't clear messages
-        break;
+if (!window.REPLAY_DATA) {
+  function teardown(): void {
+    if (activeWs) {
+      activeWs.onopen = null;
+      activeWs.onmessage = null;
+      activeWs.onclose = null;
+      activeWs.onerror = null;
+      activeWs.close();
+      activeWs = null;
     }
-  };
+    if (reconnectTimer !== null) {
+      clearTimeout(reconnectTimer);
+      reconnectTimer = null;
+    }
+  }
 
-  ws.onclose = () => {
-    if (ws !== activeWs) return;
-    console.log(`[${ts()}] WebSocket closed, reconnecting...`);
+  function scheduleReconnect(): void {
+    if (reconnectTimer !== null) return;
+    reconnectTimer = setTimeout(() => {
+      reconnectTimer = null;
+      connect();
+    }, backoffDelay);
+    backoffDelay = Math.min(backoffDelay * 2, BACKOFF_MAX);
+  }
+
+  function connect(): void {
     teardown();
     setStatus('connecting');
-    scheduleReconnect();
-  };
 
-  ws.onerror = () => {
-    if (ws !== activeWs) return;
-    console.log(`[${ts()}] WebSocket error`);
-  };
+    const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const wsUrl = `${proto}//${location.host}/ws`;
+    const ws = new WebSocket(wsUrl);
+    activeWs = ws;
+
+    ws.onopen = () => {
+      console.log(`[${ts()}] WebSocket onopen`);
+      setStatus('connected');
+      backoffDelay = BACKOFF_INITIAL;
+      // Report current viewport size to server
+      lastViewportW = 0;
+      lastViewportH = 0;
+      const dpr = window.devicePixelRatio || 1;
+      const rect = canvas.getBoundingClientRect();
+      sendViewportSize(Math.round(rect.width), Math.round(rect.height));
+    };
+
+    ws.onmessage = (event) => {
+      if (ws !== activeWs) return;
+      const data = JSON.parse(event.data);
+
+      switch (data.type) {
+        case 'connected':
+          console.log(`[${ts()}] Connected event received`);
+          setStatus('connected');
+          break;
+
+        case 'draw': {
+          // Promote previous slide to history before drawing new content
+          promoteCompletedSlide();
+          const rawInstructions: unknown[] = data.instructions;
+          const { valid, errors } = validateInstructions(rawInstructions);
+          console.log(`[${ts()}] Draw received: ${rawInstructions.length} instructions (${valid.length} valid, ${errors.length} invalid)`);
+          
+          // Record draw event (capture previousCanvas from websocket message)
+          recordingsData.push({
+            type: 'draw',
+            timestamp: Date.now(),
+            data: {
+              previousCanvas: data.previousCanvas || 'keep',
+              instructions: valid,
+              caption: data.caption || '',
+              slide: data.slide || 0,
+              totalSlides: data.totalSlides || 0,
+            }
+          });
+          
+          clearIdleTimer();
+          isWelcomeScreen = false;
+          hideTyping();
+          // Auto-return to live view when agent draws new content
+          viewingSlideIndex = -1;
+          // Store slide info for last slide detection
+          lastSlideInfo = {
+            slide: data.slide || 0,
+            totalSlides: data.totalSlides || 0,
+          };
+          currentInstructions = valid;
+          isDrawing = true;
+          updateNavUI(); // Hide nav while drawing
+          board.addInstructions(valid);
+          // Render caption with slide info as inline suffix
+          if (pendingCaption) {
+            let suffix = '';
+            if (data.slide && data.totalSlides) {
+              suffix = `${data.slide}/${data.totalSlides}`;
+            }
+            if (isLastSlide()) {
+              suffix += suffix ? ' · fin' : 'fin';
+            }
+            addAgentMessage(pendingCaption, suffix || undefined);
+            pendingCaption = '';
+          }
+          if (errors.length > 0) {
+            addSystemMessage(`Warning: ${errors.length} of ${rawInstructions.length} instructions were invalid and skipped`);
+            pendingValidationErrors = formatValidationErrors(errors, rawInstructions.length);
+          } else {
+            pendingValidationErrors = null;
+          }
+          if (data.ack_id) {
+            if (valid.length === 0 && errors.length > 0) {
+              // All instructions invalid — send errors back to agent immediately
+              sendAck(data.ack_id, '');
+            } else {
+              pendingAckId = data.ack_id;
+              // enableInput() will be called by onQueueEmpty when animation finishes
+            }
+          }
+          break;
+        }
+
+        case 'caption':
+          console.log(`[${ts()}] Caption received: "${data.text}"`);
+          clearIdleTimer();
+          currentCaption = data.text || '';
+          // Slide suffix is set by the draw handler (arrives after caption)
+          pendingCaption = data.text || '';
+          break;
+
+        case 'reset':
+          console.log(`[${ts()}] Reset received`);
+          board.reset();
+          pendingAckId = null;
+          disableInput();
+          hideTyping();
+          // Chat history persists — don't clear messages
+          break;
+      }
+    };
+
+    ws.onclose = () => {
+      if (ws !== activeWs) return;
+      console.log(`[${ts()}] WebSocket closed, reconnecting...`);
+      teardown();
+      setStatus('connecting');
+      scheduleReconnect();
+    };
+
+    ws.onerror = () => {
+      if (ws !== activeWs) return;
+      console.log(`[${ts()}] WebSocket error`);
+    };
+  }
+
+  connect();
 }
-
-connect();
 
 // --- Download session ---
 
