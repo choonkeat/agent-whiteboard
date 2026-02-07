@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Test Replay Generation</title>
+</head>
+<body>
+  <h1>Test Replay HTML Generation</h1>
+  <button id="generate">Generate Replay HTML</button>
+  <pre id="output"></pre>
+  
+  <script type="module">
+    import { generateReplayHTML } from './mcp-client/replay-template.js';
+    
+    document.getElementById('generate').addEventListener('click', () => {
+      const testData = {
+        version: 1,
+        exportedAt: new Date().toISOString(),
+        slides: [
+          {
+            instructions: [
+              { type: 'moveTo', x: 100, y: 100 },
+              { type: 'drawRect', x: 100, y: 100, width: 200, height: 100, fill: '#E3F2FD' },
+              { type: 'writeText', text: 'Hello World', x: 150, y: 150, fontSize: 20 }
+            ],
+            caption: 'This is a test slide showing a blue rectangle with text',
+            timestamp: Date.now()
+          },
+          {
+            instructions: [
+              { type: 'moveTo', x: 400, y: 300 },
+              { type: 'drawCircle', x: 400, y: 300, radius: 50, fill: '#FFE0B2' },
+              { type: 'writeText', text: 'Circle', x: 380, y: 310, fontSize: 16 }
+            ],
+            caption: 'Second slide with a circle',
+            timestamp: Date.now() + 1000
+          }
+        ]
+      };
+      
+      const html = generateReplayHTML(testData);
+      
+      // Download the generated HTML
+      const blob = new Blob([html], { type: 'text/html' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'test-replay.html';
+      a.click();
+      URL.revokeObjectURL(url);
+      
+      document.getElementById('output').textContent = 'Generated! Check your downloads folder for test-replay.html';
+    });
+  </script>
+</body>
+</html>

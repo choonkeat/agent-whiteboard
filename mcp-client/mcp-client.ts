@@ -1,7 +1,6 @@
 import { AgentWhiteboard } from '../src/index.js';
 import { validateInstructions, formatValidationErrors } from './validate-instructions.js';
 import { VERSION } from './version.js';
-import { generateReplayHTML } from './replay-template.js';
 
 const canvas = document.getElementById('whiteboard') as HTMLCanvasElement;
 const canvasWrap = document.getElementById('canvas-wrap') as HTMLDivElement;
@@ -25,6 +24,12 @@ const IDLE_TIMEOUT = 30_000; // 30s without a new message → session idle
 
 // --- Session recording (always-on) ---
 
+interface RecordingEvent {
+  type: 'draw' | 'userMessage' | 'agentMessage';
+  timestamp: number;
+  data: any;
+}
+
 interface SlideRecord {
   instructions: unknown[];
   caption: string;
@@ -33,6 +38,7 @@ interface SlideRecord {
 }
 
 const sessionLog: SlideRecord[] = [];
+const recordingsData: RecordingEvent[] = []; // Full recording for replay
 let currentCaption = '';
 let currentInstructions: unknown[] = [];
 let isWelcomeScreen = false;
@@ -335,14 +341,17 @@ function addBubble(text: string, type: 'agent' | 'user' | 'system', suffix?: str
 
 function addAgentMessage(text: string, suffix?: string): void {
   addBubble(text, 'agent', suffix);
+  recordingsData.push({ type: 'agentMessage', timestamp: Date.now(), data: { text, suffix } });
 }
 
 function addUserMessage(text: string): void {
   addBubble(text, 'user');
+  recordingsData.push({ type: 'userMessage', timestamp: Date.now(), data: { text } });
 }
 
 function addSystemMessage(text: string): void {
   addBubble(text, 'system');
+  // Don't record system messages in replay
 }
 
 function clearMessages(): void {
@@ -566,6 +575,19 @@ function connect(): void {
         const rawInstructions: unknown[] = data.instructions;
         const { valid, errors } = validateInstructions(rawInstructions);
         console.log(`[${ts()}] Draw received: ${rawInstructions.length} instructions (${valid.length} valid, ${errors.length} invalid)`);
+        
+        // Record draw event
+        recordingsData.push({
+          type: 'draw',
+          timestamp: Date.now(),
+          data: {
+            instructions: valid,
+            caption: data.caption || '',
+            slide: data.slide || 0,
+            totalSlides: data.totalSlides || 0,
+          }
+        });
+        
         clearIdleTimer();
         isWelcomeScreen = false;
         hideTyping();
@@ -665,19 +687,112 @@ function allSlides(): SlideRecord[] {
   return slides;
 }
 
-downloadBtn.addEventListener('click', () => {
-  const slides = allSlides();
-  if (slides.length === 0) return;
-  const payload = {
-    version: 1,
-    exportedAt: new Date().toISOString(),
-    slides: slides.map(({ instructions, caption, timestamp }) => ({
-      instructions,
-      caption,
-      timestamp,
-    })),
-  };
-  const html = generateReplayHTML(payload);
-  const blob = new Blob([html], { type: 'text/html' });
-  downloadFile(blob, `whiteboard-replay-${Date.now()}.html`);
+downloadBtn.addEventListener('click', async () => {
+  if (recordingsData.length === 0) return;
+  
+  try {
+    // Clone the current DOM
+    const clonedDoc = document.cloneNode(true) as Document;
+    
+    // Find and fetch CSS
+    const cssLink = document.querySelector('link[rel="stylesheet"]') as HTMLLinkElement;
+    const cssHref = cssLink?.href;
+    if (!cssHref) throw new Error('CSS link not found');
+    
+    const cssResponse = await fetch(cssHref);
+    const cssText = await cssResponse.text();
+    
+    // Find and fetch JS
+    const jsScript = document.querySelector('script[type="module"]') as HTMLScriptElement;
+    const jsSrc = jsScript?.src;
+    if (!jsSrc) throw new Error('JS script not found');
+    
+    const jsResponse = await fetch(jsSrc);
+    const jsText = await jsResponse.text();
+    
+    // Replace link with inline style
+    const clonedCssLink = clonedDoc.querySelector('link[rel="stylesheet"]');
+    if (clonedCssLink) {
+      const styleEl = clonedDoc.createElement('style');
+      styleEl.textContent = cssText;
+      clonedCssLink.replaceWith(styleEl);
+    }
+    
+    // Replace script with inline + recording data
+    const clonedJsScript = clonedDoc.querySelector('script[type="module"]');
+    if (clonedJsScript) {
+      const newScript = clonedDoc.createElement('script');
+      newScript.textContent = jsText + `\n\n// Replay data\nwindow.REPLAY_DATA = ${JSON.stringify(recordingsData)};\nif (window.REPLAY_DATA) { window.replayRecordings(window.REPLAY_DATA); }`;
+      clonedJsScript.replaceWith(newScript);
+    }
+    
+    // Clear messages and canvas in cloned doc
+    const clonedMessages = clonedDoc.getElementById('messages');
+    if (clonedMessages) clonedMessages.innerHTML = '';
+    
+    // Serialize and download
+    const htmlText = '<!DOCTYPE html>\n' + clonedDoc.documentElement.outerHTML;
+    const blob = new Blob([htmlText], { type: 'text/html' });
+    downloadFile(blob, `whiteboard-replay-${Date.now()}.html`);
+  } catch (err) {
+    console.error('Failed to generate replay:', err);
+    alert('Failed to generate replay file');
+  }
 });
+
+// --- Replay function (dormant in live, activated in downloaded HTML) ---
+
+declare global {
+  interface Window {
+    REPLAY_DATA?: RecordingEvent[];
+    replayRecordings?: (data: RecordingEvent[]) => Promise<void>;
+  }
+}
+
+window.replayRecordings = async function(data: RecordingEvent[]) {
+  console.log('[Replay] Starting replay with', data.length, 'events');
+  
+  // Hide input/download controls
+  chatInput.style.display = 'none';
+  sendBtn.style.display = 'none';
+  downloadBtn.style.display = 'none';
+  statusDot.style.display = 'none';
+  
+  // Auto-play through all events
+  for (const event of data) {
+    if (event.type === 'draw') {
+      const { instructions, caption, slide, totalSlides } = event.data;
+      
+      // Add caption as agent message
+      let suffix = '';
+      if (slide && totalSlides) {
+        suffix = `${slide}/${totalSlides}`;
+      }
+      if (slide === totalSlides && totalSlides > 0) {
+        suffix += suffix ? ' · fin' : 'fin';
+      }
+      addAgentMessage(caption, suffix || undefined);
+      
+      // Draw instructions
+      board.addInstructions(instructions);
+      
+      // Wait for drawing to complete
+      while (board.isAnimating) {
+        await new Promise(resolve => setTimeout(resolve, 100));
+      }
+      
+      // Small pause between slides
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+    } else if (event.type === 'userMessage') {
+      addUserMessage(event.data.text);
+      await new Promise(resolve => setTimeout(resolve, 300));
+      
+    } else if (event.type === 'agentMessage') {
+      addAgentMessage(event.data.text, event.data.suffix);
+      await new Promise(resolve => setTimeout(resolve, 300));
+    }
+  }
+  
+  console.log('[Replay] Replay complete');
+};
