@@ -177,6 +177,7 @@ function startIdleTimer(): void {
     console.log(`[${ts()}] Idle timeout — returning to welcome`);
     hideTyping();
     disableInput();
+    clearMessages(); // Clear chat when entering idle mode
     showWelcome();
   }, IDLE_TIMEOUT);
 }
@@ -260,6 +261,33 @@ showWelcome();
 
 // --- Chat message helpers ---
 
+// Track if user has manually scrolled up
+let isUserScrolledUp = false;
+
+// Check if messages container is scrolled near the bottom (within 50px threshold)
+function isNearBottom(): boolean {
+  const threshold = 50;
+  const scrollBottom = messagesEl.scrollHeight - messagesEl.scrollTop - messagesEl.clientHeight;
+  return scrollBottom <= threshold;
+}
+
+// Scroll to bottom smoothly
+function scrollToBottom(smooth = true): void {
+  if (smooth) {
+    messagesEl.scrollTo({
+      top: messagesEl.scrollHeight,
+      behavior: 'smooth'
+    });
+  } else {
+    messagesEl.scrollTop = messagesEl.scrollHeight;
+  }
+}
+
+// Track user scroll behavior
+messagesEl.addEventListener('scroll', () => {
+  isUserScrolledUp = !isNearBottom();
+});
+
 function addBubble(text: string, type: 'agent' | 'user' | 'system', suffix?: string): void {
   const div = document.createElement('div');
   div.className = `bubble ${type}`;
@@ -271,7 +299,12 @@ function addBubble(text: string, type: 'agent' | 'user' | 'system', suffix?: str
     div.appendChild(span);
   }
   messagesEl.appendChild(div);
-  messagesEl.scrollTop = messagesEl.scrollHeight;
+  
+  // Auto-scroll if user hasn't manually scrolled up, or if they sent the message
+  if (!isUserScrolledUp || type === 'user') {
+    // Use requestAnimationFrame to ensure DOM has updated before scrolling
+    requestAnimationFrame(() => scrollToBottom(true));
+  }
 }
 
 function addAgentMessage(text: string, suffix?: string): void {
@@ -284,6 +317,11 @@ function addUserMessage(text: string): void {
 
 function addSystemMessage(text: string): void {
   addBubble(text, 'system');
+}
+
+function clearMessages(): void {
+  messagesEl.innerHTML = '';
+  isUserScrolledUp = false;
 }
 
 // --- Input state ---
@@ -300,6 +338,9 @@ function enableInput(): void {
     quickRepliesEnd.classList.remove('visible');
   }
   chatInput.focus();
+  // Scroll to bottom after quick-replies appear (they take up space)
+  // Use setTimeout to ensure DOM has fully updated and laid out
+  setTimeout(() => scrollToBottom(true), 100);
 }
 
 function disableInput(): void {
@@ -343,6 +384,8 @@ function handleSend(): void {
   if (text) {
     addUserMessage(text);
   }
+  // Reset scroll tracking when user sends a message
+  isUserScrolledUp = false;
   sendAck(pendingAckId, text);
   pendingAckId = null;
   chatInput.value = '';
@@ -367,6 +410,8 @@ quickReplies.addEventListener('click', (e) => {
 
   const message = chip.dataset.message || '';
   addUserMessage(message);
+  // Reset scroll tracking when user clicks quick reply
+  isUserScrolledUp = false;
   sendAck(pendingAckId, message);
   pendingAckId = null;
   chatInput.value = '';
@@ -383,6 +428,8 @@ quickRepliesEnd.addEventListener('click', (e) => {
   if (message) {
     addUserMessage(message);
   }
+  // Reset scroll tracking when user clicks quick reply
+  isUserScrolledUp = false;
   sendAck(pendingAckId, message);
   pendingAckId = null;
   chatInput.value = '';
