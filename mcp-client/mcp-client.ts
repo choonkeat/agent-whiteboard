@@ -1,5 +1,6 @@
 import { AgentWhiteboard } from '../src/index.js';
 import { validateInstructions, formatValidationErrors } from './validate-instructions.js';
+import { VERSION } from './version.js';
 
 const canvas = document.getElementById('whiteboard') as HTMLCanvasElement;
 const canvasWrap = document.getElementById('canvas-wrap') as HTMLDivElement;
@@ -125,6 +126,8 @@ const board = new AgentWhiteboard(canvas, {
     console.log(`[${ts()}] Queue empty (drawing done)`);
     isDrawing = false;
     updateNavUI(); // Re-show nav now that drawing is done
+    // Draw watermark after all animations complete
+    drawWatermark();
     // Stash completed slide — it will be promoted to history when the next draw arrives
     if (!isWelcomeScreen && currentInstructions.length > 0) {
       completedSlide = {
@@ -145,6 +148,18 @@ const board = new AgentWhiteboard(canvas, {
 
 // --- Welcome / idle state ---
 
+function drawWatermark(): void {
+  const ctx = canvas.getContext('2d')!;
+  const dpr = window.devicePixelRatio || 1;
+  ctx.save();
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'bottom';
+  ctx.fillStyle = 'rgba(0, 0, 0, 0.15)';
+  ctx.font = '10px sans-serif';
+  ctx.fillText(`@choonkeat/agent-whiteboard v${VERSION}`, 8, canvas.height / dpr - 8);
+  ctx.restore();
+}
+
 function showWelcome(): void {
   board.reset();
   isWelcomeScreen = true;
@@ -162,6 +177,7 @@ function showWelcome(): void {
   ctx.font = '16px sans-serif';
   ctx.fillText('Waiting for agent to draw...', cx, cy + 20);
   ctx.restore();
+  drawWatermark();
 }
 
 function clearIdleTimer(): void {

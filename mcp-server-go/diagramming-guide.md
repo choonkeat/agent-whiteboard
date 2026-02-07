@@ -2,6 +2,22 @@
 
 Read this before drawing. These principles help humans actually understand your diagrams.
 
+## Version information
+
+The current version is displayed as a watermark in the bottom-left corner of the canvas. If you encounter issues or suspect you're using an outdated version:
+
+**To clear npx cache and force latest version:**
+```bash
+npx clear-npx-cache
+npx @choonkeat/agent-whiteboard@latest
+```
+
+Or manually:
+```bash
+rm -rf ~/.npm/_npx
+npx @choonkeat/agent-whiteboard@latest
+```
+
 ## Cognitive principles
 
 ### 1. Gradual reveal (chunking)

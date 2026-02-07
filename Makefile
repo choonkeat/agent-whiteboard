@@ -1,4 +1,4 @@
-.PHONY: build publish publish-dry test
+.PHONY: build publish publish-dry test bump
 
 test:
 	$(MAKE) -C mcp-server-go test
@@ -13,3 +13,18 @@ publish-dry: build
 
 publish: build
 	DRY_RUN=false ./scripts/publish.sh
+
+bump:
+	@if [ -z "$(VERSION)" ]; then \
+		echo "Usage: make bump VERSION=x.y.z"; \
+		exit 1; \
+	fi
+	@echo "Bumping version to $(VERSION)..."
+	@# Update package.json
+	@sed -i 's/"version": "[^"]*"/"version": "$(VERSION)"/' package.json
+	@# Update Go server version
+	@sed -i 's/Version: "[^"]*"/Version: "$(VERSION)"/' mcp-server-go/main.go
+	@# Commit the changes
+	@git add package.json mcp-server-go/main.go
+	@git commit -m "Bump version to $(VERSION)"
+	@echo "Version bumped to $(VERSION) and committed"

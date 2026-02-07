@@ -9,6 +9,7 @@ dist/whiteboard-mcp: mcp-client-dist $(shell find . -name '*.go')
 	go build -o dist/whiteboard-mcp .
 
 mcp-client-dist: $(shell find $(ROOT)/mcp-client -type f) $(shell find $(ROOT)/src -type f)
+	cd $(ROOT) && node scripts/generate-version.js
 	cd $(ROOT) && npx vite build --config vite.mcp-client.config.ts
 
 test:
