@@ -75,14 +75,15 @@ canvas {
   left: 50%;
   top: 50%;
   transform: translate(-50%, -50%);
-  background: rgba(26, 26, 46, 0.9);
+  background: rgba(26, 26, 46, 0.95);
   color: #e0e0e0;
-  padding: 0.3rem 0.6rem;
-  border-radius: 4px;
-  font-size: 0.75rem;
-  font-weight: 500;
+  padding: 0.4rem 0.7rem;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  font-weight: 600;
   pointer-events: none;
   white-space: nowrap;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
   z-index: 100;
 }
 
