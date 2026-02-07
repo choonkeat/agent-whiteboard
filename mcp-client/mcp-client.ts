@@ -849,8 +849,18 @@ window.replayRecordings = async function(data: RecordingEvent[]) {
       
       // Wait for user to click Continue
       if (eventIndex < data.length) {
-        const nextEvent = data[eventIndex];
-        const userReply = nextEvent.type === 'userMessage' ? nextEvent.data.text : 'Continue';
+        // Find the next user message (if any) to show as button text
+        let userReply = 'Continue';
+        let userMessageIndex = -1;
+        for (let i = eventIndex; i < data.length; i++) {
+          if (data[i].type === 'userMessage') {
+            userReply = data[i].data.text;
+            userMessageIndex = i;
+            break;
+          }
+          // Stop searching after next draw event
+          if (data[i].type === 'draw') break;
+        }
         
         // Show quick reply button with the actual user's response
         quickReplies.classList.add('visible');
@@ -860,11 +870,16 @@ window.replayRecordings = async function(data: RecordingEvent[]) {
         chip.textContent = userReply;
         chip.onclick = async () => {
           quickReplies.classList.remove('visible');
-          if (nextEvent.type === 'userMessage') {
-            addUserMessage(nextEvent.data.text);
-            eventIndex++; // Skip the user message since we just added it
-          }
+          
+          // Add user message to chat
+          addUserMessage(userReply);
           await new Promise(resolve => setTimeout(resolve, 300));
+          
+          // Skip the user message event if we found one
+          if (userMessageIndex >= 0) {
+            eventIndex = userMessageIndex + 1;
+          }
+          
           playNextEvent();
         };
         quickReplies.appendChild(chip);
