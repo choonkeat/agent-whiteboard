@@ -1,11 +1,11 @@
-# ADR 004: Turtle-Inspired, Not Pure Turtle Graphics
+# ADR 004: Turtle-Graphics-Inspired, Not Pure Turtle Graphics
 
 **Date**: 2026-02-07  
 **Status**: Accepted
 
 ## Context
 
-The project description initially called this a "turtle-graphics" whiteboard. However, the instruction set is not pure turtle graphics - it's a hybrid approach.
+This project is "turtle-graphics-inspired" rather than pure turtle graphics. The instruction set is a hybrid approach that combines turtle-graphics concepts with direct coordinate-based drawing.
 
 **Pure turtle graphics** consists of:
 - Relative movement: `forward(distance)`
@@ -19,7 +19,7 @@ The project description initially called this a "turtle-graphics" whiteboard. Ho
 
 ## Decision
 
-We describe this as **"turtle-inspired"** rather than "turtle-graphics" because:
+We describe this as **"turtle-graphics-inspired"** rather than pure "turtle-graphics" because:
 
 1. **We maintain turtle state** (position, heading, pen up/down)
 2. **We support turtle commands** for when they make sense
@@ -89,9 +89,9 @@ Turtle commands (`forward`, `turnLeft`, `turnRight`) are useful for:
 
 ## Implementation
 
-- Updated package.json description from "Turtle-graphics-inspired" to "Turtle-inspired"
-- Updated README.md tagline
-- Maintain both instruction types in the API
+- Keep "Turtle-graphics-inspired" in package.json and README.md
+- The "-inspired" suffix clarifies we're not pure turtle graphics
+- Maintain both turtle-style and coordinate-based instruction types in the API
 
 ## References
 

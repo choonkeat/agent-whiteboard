@@ -1,6 +1,6 @@
 # Agent Whiteboard
 
-Turtle-inspired animated whiteboard for AI agents with hand-drawn aesthetics. An agent calls MCP tools to draw on a canvas that a human watches in real time, responding via a chat interface to advance or give feedback.
+Turtle-graphics-inspired animated whiteboard for AI agents with hand-drawn aesthetics. An agent calls MCP tools to draw on a canvas that a human watches in real time, responding via a chat interface to advance or give feedback.
 
 Built with [Rough.js](https://roughjs.com/) for a sketchy, hand-drawn look and progressive arc-length animation for smooth drawing.
 
