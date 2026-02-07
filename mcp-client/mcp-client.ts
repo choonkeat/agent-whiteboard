@@ -225,6 +225,7 @@ watchDpr();
 // --- Grab bar drag ---
 
 (function initGrabBar() {
+  const resizeTooltip = document.getElementById('resize-tooltip') as HTMLDivElement;
   let dragging = false;
   let startY = 0;
   let startH = 0;
@@ -235,6 +236,7 @@ watchDpr();
     startH = canvasWrap.getBoundingClientRect().height;
     grabBar.setPointerCapture(e.pointerId);
     document.body.style.cursor = 'row-resize';
+    resizeTooltip.classList.add('visible');
     e.preventDefault();
   }
 
@@ -243,12 +245,19 @@ watchDpr();
     const delta = e.clientY - startY;
     const newH = Math.max(200, Math.min(window.innerHeight * 0.85, startH + delta));
     canvasWrap.style.height = newH + 'px';
+    
+    // Update tooltip with canvas dimensions
+    const rect = canvas.getBoundingClientRect();
+    const w = Math.round(rect.width);
+    const h = Math.round(rect.height);
+    resizeTooltip.textContent = `${w} × ${h}`;
   }
 
   function onPointerUp() {
     if (!dragging) return;
     dragging = false;
     document.body.style.cursor = '';
+    resizeTooltip.classList.remove('visible');
   }
 
   grabBar.addEventListener('pointerdown', onPointerDown);

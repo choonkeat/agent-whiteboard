@@ -30,7 +30,7 @@ body {
 
 #canvas-wrap {
   position: relative;
-  height: 55vh;
+  height: 600px;
   min-height: 200px;
   max-height: 85vh;
   flex-shrink: 0;
@@ -67,6 +67,27 @@ canvas {
 
 #grab-bar:hover .grab-line {
   opacity: 1;
+}
+
+.resize-tooltip {
+  display: none;
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(26, 26, 46, 0.9);
+  color: #e0e0e0;
+  padding: 0.3rem 0.6rem;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  pointer-events: none;
+  white-space: nowrap;
+  z-index: 100;
+}
+
+.resize-tooltip.visible {
+  display: block;
 }
 
 /* --- Chat area --- */
