@@ -1,6 +1,6 @@
 {
   "name": "@choonkeat/agent-whiteboard",
-  "version": "0.3.2",
+  "version": "0.3.3",
   "description": "Turtle-graphics-inspired animated whiteboard for AI agents with hand-drawn aesthetics",
   "type": "module",
   "main": "./dist/agent-whiteboard.umd.cjs",
