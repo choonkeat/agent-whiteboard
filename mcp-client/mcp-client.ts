@@ -25,7 +25,7 @@ const IDLE_TIMEOUT = 30_000; // 30s without a new message → session idle
 // --- Session recording (always-on) ---
 
 interface RecordingEvent {
-  type: 'draw' | 'userMessage' | 'agentMessage';
+  type: 'draw' | 'userMessage' | 'agentMessage' | 'caption';
   timestamp: number;
   data: any;
 }
@@ -575,18 +575,23 @@ if (!window.REPLAY_DATA) {
         case 'draw': {
           // Promote previous slide to history before drawing new content
           promoteCompletedSlide();
+          
+          // Clear canvas if previousCanvas is 'discard'
+          if (data.previousCanvas === 'discard') {
+            board.clear();
+          }
+          
           const rawInstructions: unknown[] = data.instructions;
           const { valid, errors } = validateInstructions(rawInstructions);
           console.log(`[${ts()}] Draw received: ${rawInstructions.length} instructions (${valid.length} valid, ${errors.length} invalid)`);
           
-          // Record draw event (capture previousCanvas from websocket message)
+          // Record draw event (caption comes separately in 'caption' event)
           recordingsData.push({
             type: 'draw',
             timestamp: Date.now(),
             data: {
               previousCanvas: data.previousCanvas || 'keep',
               instructions: valid,
-              caption: data.caption || '',
               slide: data.slide || 0,
               totalSlides: data.totalSlides || 0,
             }
@@ -642,6 +647,13 @@ if (!window.REPLAY_DATA) {
           currentCaption = data.text || '';
           // Slide suffix is set by the draw handler (arrives after caption)
           pendingCaption = data.text || '';
+          
+          // Record caption event for replay
+          recordingsData.push({
+            type: 'caption',
+            timestamp: Date.now(),
+            data: { text: data.text || '' }
+          });
           break;
 
         case 'reset':
@@ -759,9 +771,14 @@ body {
     // Remove all script tags and replace with our inline version
     clonedDoc.querySelectorAll('script').forEach(s => s.remove());
     
-    // Add new inline script (NOT as module)
+    // Add replay data FIRST, before the main script runs
+    const replayDataScript = clonedDoc.createElement('script');
+    replayDataScript.textContent = `window.REPLAY_DATA = ${JSON.stringify(recordingsData)};`;
+    clonedDoc.body.appendChild(replayDataScript);
+    
+    // Add main inline script (NOT as module)
     const newScript = clonedDoc.createElement('script');
-    newScript.textContent = jsText + `\n\n// Replay data\nwindow.REPLAY_DATA = ${JSON.stringify(recordingsData)};\nif (window.REPLAY_DATA && window.replayRecordings) { setTimeout(() => window.replayRecordings(window.REPLAY_DATA), 500); }`;
+    newScript.textContent = jsText + `\n\n// Start replay\nif (window.REPLAY_DATA && window.replayRecordings) { setTimeout(() => window.replayRecordings(window.REPLAY_DATA), 500); }`;
     clonedDoc.body.appendChild(newScript);
     
     // Clear messages in cloned doc
@@ -807,28 +824,38 @@ window.replayRecordings = async function(data: RecordingEvent[]) {
     const event = data[eventIndex];
     eventIndex++;
     
-    if (event.type === 'draw') {
-      const { previousCanvas, instructions, caption, slide, totalSlides } = event.data;
+    if (event.type === 'caption') {
+      // Set pending caption (will be shown when draw event arrives)
+      pendingCaption = event.data.text || '';
+      currentCaption = event.data.text || '';
+      playNextEvent();
+      
+    } else if (event.type === 'draw') {
+      const { previousCanvas, instructions, slide, totalSlides } = event.data;
+      
+      // Promote previous slide to history before drawing new content
+      promoteCompletedSlide();
       
       // Clear canvas if previousCanvas is 'discard'
       if (previousCanvas === 'discard') {
-        promoteCompletedSlide();
         board.clear();
       }
       
-      // Add caption as agent message
-      let suffix = '';
-      if (slide && totalSlides) {
-        suffix = `${slide}/${totalSlides}`;
+      // Show caption with slide info (matches live version flow)
+      if (pendingCaption) {
+        let suffix = '';
+        if (slide && totalSlides) {
+          suffix = `${slide}/${totalSlides}`;
+        }
+        if (slide === totalSlides && totalSlides > 0) {
+          suffix += suffix ? ' · fin' : 'fin';
+        }
+        addAgentMessage(pendingCaption, suffix || undefined);
+        pendingCaption = '';
       }
-      if (slide === totalSlides && totalSlides > 0) {
-        suffix += suffix ? ' · fin' : 'fin';
-      }
-      addAgentMessage(caption, suffix || undefined);
       
       // Store slide info for promotion
       currentInstructions = instructions;
-      currentCaption = caption;
       isDrawing = true;
       
       // Draw instructions
@@ -862,8 +889,8 @@ window.replayRecordings = async function(data: RecordingEvent[]) {
             userMessageIndex = i;
             break;
           }
-          // Stop searching after next draw event
-          if (data[i].type === 'draw') break;
+          // Stop searching after next draw or caption event
+          if (data[i].type === 'draw' || data[i].type === 'caption') break;
         }
         
         // Show quick reply button with the actual user's response

@@ -145,16 +145,14 @@ Read whiteboard://diagramming-guide for layout rules and cognitive principles.`,
 
 		ack := bus.CreateAck()
 
-		if params.PreviousCanvas == PreviousCanvasDiscard {
-			bus.Publish(Event{Type: "reset"})
-		}
 		bus.Publish(Event{Type: "caption", Text: params.Caption})
 		bus.Publish(Event{
-			Type:         "draw",
-			Instructions: params.Instructions,
-			AckID:        ack.ID,
-			Slide:        params.Slide,
-			TotalSlides:  params.TotalSlides,
+			Type:           "draw",
+			Instructions:   params.Instructions,
+			PreviousCanvas: string(params.PreviousCanvas), // "keep" or "discard"
+			AckID:          ack.ID,
+			Slide:          params.Slide,
+			TotalSlides:    params.TotalSlides,
 		})
 
 		var result string

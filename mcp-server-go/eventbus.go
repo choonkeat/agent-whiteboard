@@ -13,12 +13,13 @@ const ackTimeout = 5 * time.Minute
 
 // Event represents a whiteboard event sent to browser clients.
 type Event struct {
-	Type         string `json:"type"`
-	Text         string `json:"text,omitempty"`          // caption
-	Instructions []any  `json:"instructions,omitempty"`  // draw
-	AckID        string `json:"ack_id,omitempty"`        // draw
-	Slide        int    `json:"slide,omitempty"`         // draw
-	TotalSlides  int    `json:"totalSlides,omitempty"`   // draw
+	Type           string `json:"type"`
+	Text           string `json:"text,omitempty"`           // caption
+	Instructions   []any  `json:"instructions,omitempty"`   // draw
+	PreviousCanvas string `json:"previousCanvas,omitempty"` // draw: 'keep' or 'discard'
+	AckID          string `json:"ack_id,omitempty"`         // draw
+	Slide          int    `json:"slide,omitempty"`          // draw
+	TotalSlides    int    `json:"totalSlides,omitempty"`    // draw
 }
 
 // AckHandle is returned by CreateAck. Read from Ch to wait for ack or timeout.
