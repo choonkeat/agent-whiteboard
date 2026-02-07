@@ -6,6 +6,12 @@ Built on cognitive principles: gradual reveal (chunking), viewer-controlled paci
 
 Built with [Rough.js](https://roughjs.com/) for a sketchy, hand-drawn look and progressive arc-length animation for smooth drawing.
 
+## Demo
+
+[![Watch: Agent Whiteboard the Humane Interface: How To Explain So Humans Will Listen](https://img.youtube.com/vi/Nn2Lfpz7qxg/maxresdefault.jpg)](https://www.youtube.com/watch?v=Nn2Lfpz7qxg)
+
+Watch an AI agent explain Agent Whiteboard using Agent Whiteboard itself—including finding and fixing a bug live!
+
 ## Quick Start
 
 ### 1. Install into Claude Code (stdio + HTTP)
