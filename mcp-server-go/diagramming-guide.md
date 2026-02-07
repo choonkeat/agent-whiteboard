@@ -4,19 +4,14 @@ Read this before drawing. These principles help humans actually understand your 
 
 ## Version information
 
-The current version is displayed as a watermark in the bottom-left corner of the canvas. If you encounter issues or suspect you're using an outdated version:
+The current version is displayed as a watermark in the bottom-left corner of the canvas. If the user reports issues or suspects they're using an outdated version:
 
-**To clear npx cache and force latest version:**
+**To clear npx cache for this package only:**
 ```bash
-npx clear-npx-cache
-npx @choonkeat/agent-whiteboard@latest
+rm -rf ~/.npm/_npx/*/node_modules/.cache/@choonkeat/agent-whiteboard*
 ```
 
-Or manually:
-```bash
-rm -rf ~/.npm/_npx
-npx @choonkeat/agent-whiteboard@latest
-```
+Then the user should **disconnect and reconnect the MCP server** in their IDE to pick up the latest version.
 
 ## Cognitive principles
 
