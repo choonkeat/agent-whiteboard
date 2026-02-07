@@ -30,7 +30,7 @@ body {
 
 #canvas-wrap {
   position: relative;
-  height: 600px;
+  height: 550px;
   min-height: 200px;
   max-height: 85vh;
   flex-shrink: 0;
@@ -213,6 +213,7 @@ canvas {
 #quick-replies-end {
   display: none;
   flex-direction: row;
+  justify-content: flex-end;
   gap: 0.5rem;
   padding: 0.4rem 0;
   flex-wrap: wrap;
@@ -342,12 +343,7 @@ canvas {
   50% { opacity: 1; }
 }
 
-/* --- Download button & menu --- */
-
-#download-wrap {
-  position: relative;
-  flex-shrink: 0;
-}
+/* --- Download button --- */
 
 #btn-download {
   display: none;
@@ -361,6 +357,7 @@ canvas {
   color: #90a4ae;
   cursor: pointer;
   transition: background 0.15s, border-color 0.15s, color 0.15s;
+  flex-shrink: 0;
 }
 
 #btn-download.visible {
@@ -371,43 +368,4 @@ canvas {
   background: #263238;
   border-color: #90a4ae;
   color: #e0e0e0;
-}
-
-#download-menu {
-  display: none;
-  position: absolute;
-  bottom: calc(100% + 6px);
-  right: 0;
-  background: #16213e;
-  border: 1px solid #37474f;
-  border-radius: 8px;
-  overflow: hidden;
-  min-width: 170px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
-  z-index: 10;
-}
-
-#download-menu.visible {
-  display: flex;
-  flex-direction: column;
-}
-
-#download-menu button {
-  padding: 0.5rem 0.75rem;
-  font-size: 0.8rem;
-  border: none;
-  background: transparent;
-  color: #b0bec5;
-  cursor: pointer;
-  text-align: left;
-  transition: background 0.1s;
-}
-
-#download-menu button:hover {
-  background: #263238;
-  color: #e0e0e0;
-}
-
-#download-menu button + button {
-  border-top: 1px solid #263238;
 }

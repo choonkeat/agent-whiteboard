@@ -17,51 +17,37 @@ description: Development workflow for agent-whiteboard project
 ### Making Changes to Browser UI
 
 1. Edit files in `mcp-client/`
-2. Build: `npm run build:mcp-client` (quick) OR `make build` (full, recommended)
-3. Stop the whiteboard server (see "Stopping the Server" below)
-4. Reconnect MCP in Claude Code
-5. Test with whiteboard draw tool
+2. Run `make build` in the workspace root (automatically stops old server)
+3. Reconnect MCP in Claude Code (server will auto-restart)
+4. Test with whiteboard draw tool
 
 ### Key Commands
 
-- **Quick client rebuild**: `npm run build:mcp-client`
-- **Full build** (client + Go server + all platforms): `make build`
-- **Stop server safely**: See "Stopping the Server" section below
+- **Build**: `make build` (in workspace root) - Automatically stops old server
 
-### Stopping the Server
+### Why Only `make build`
 
-The server listens on a port stored in the `PORT` environment variable. To stop it safely without killing other processes:
+The Go MCP server embeds the HTML/CSS/JS files at compile time. Running `make build` does everything:
+1. Stops any running MCP server
+2. Builds the TypeScript client 
+3. Rebuilds the Go server with embedded files
 
-```bash
-# Find whiteboard processes (exclude tsserver/typingsInstaller)
-ps aux | grep whiteboard | grep -v grep | grep -v tsserver
-
-# Kill only whiteboard processes
-kill -9 <pids>
-```
-
-**IMPORTANT**: Only kill processes that are clearly whiteboard-related:
-- `npm exec @choonkeat/agent-whiteboard`
-- `sh -c "agent-whiteboard"`
-- `node /home/app/.swe-swe/bin/agent-whiteboard`
-- `/repos/agent-whiteboard/workspace/npm-platforms/linux-x64/bin/agent-whiteboard`
-
-Do NOT kill TypeScript language server processes (tsserver, typingsInstaller).
+Don't use `npm run build:mcp-client` or other partial build commands - always use `make build`.
 
 ### Important Notes
 
-- Always run `make build` to embed the updated client into Go server
-- Must reconnect MCP after rebuilding for changes to take effect
+- **CRITICAL**: Always use `make build` - it's the only build command you need
+- `make build` automatically stops any running MCP server
+- The Go server embeds static files at compile time
+- Must reconnect MCP after building for changes to take effect
 - Server uses **lazy startup** - HTTP starts on first draw call
-- Built client is embedded in `mcp-server-go/mcp-client-dist/`
 
 ## Testing Workflow
 
 1. Make changes to `mcp-client/mcp-client.ts` or CSS/HTML
-2. Run `make build`
-3. Stop existing whiteboard server (see "Stopping the Server")
-4. Reconnect MCP server in Claude Code
-5. Use `mcp_whiteboard_draw` tool to test changes
+2. Run `make build` (automatically stops old server)
+3. Reconnect MCP server in Claude Code
+4. Use `mcp_whiteboard_draw` tool to test changes
 
 ## Common Files
 

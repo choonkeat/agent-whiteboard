@@ -1,6 +1,7 @@
 import { AgentWhiteboard } from '../src/index.js';
 import { validateInstructions, formatValidationErrors } from './validate-instructions.js';
 import { VERSION } from './version.js';
+import { generateReplayHTML } from './replay-template.js';
 
 const canvas = document.getElementById('whiteboard') as HTMLCanvasElement;
 const canvasWrap = document.getElementById('canvas-wrap') as HTMLDivElement;
@@ -646,19 +647,6 @@ connect();
 
 // --- Download session ---
 
-const downloadMenu = document.getElementById('download-menu') as HTMLDivElement;
-
-downloadBtn.addEventListener('click', () => {
-  downloadMenu.classList.toggle('visible');
-});
-
-// Close menu when clicking elsewhere
-document.addEventListener('click', (e) => {
-  if (!downloadBtn.contains(e.target as Node) && !downloadMenu.contains(e.target as Node)) {
-    downloadMenu.classList.remove('visible');
-  }
-});
-
 function downloadFile(blob: Blob, filename: string): void {
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
@@ -677,7 +665,7 @@ function allSlides(): SlideRecord[] {
   return slides;
 }
 
-document.getElementById('dl-json')!.addEventListener('click', () => {
+downloadBtn.addEventListener('click', () => {
   const slides = allSlides();
   if (slides.length === 0) return;
   const payload = {
@@ -689,29 +677,7 @@ document.getElementById('dl-json')!.addEventListener('click', () => {
       timestamp,
     })),
   };
-  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
-  downloadFile(blob, `whiteboard-session-${Date.now()}.json`);
-  downloadMenu.classList.remove('visible');
-});
-
-document.getElementById('dl-png')!.addEventListener('click', () => {
-  // Download current canvas directly
-  const dataUrl = canvas.toDataURL('image/png');
-  const a = document.createElement('a');
-  a.href = dataUrl;
-  a.download = `whiteboard-current.png`;
-  a.click();
-  downloadMenu.classList.remove('visible');
-});
-
-document.getElementById('dl-all-png')!.addEventListener('click', () => {
-  const slides = allSlides();
-  if (slides.length === 0) return;
-  for (let i = 0; i < slides.length; i++) {
-    const a = document.createElement('a');
-    a.href = slides[i].snapshot;
-    a.download = `whiteboard-slide-${i + 1}.png`;
-    a.click();
-  }
-  downloadMenu.classList.remove('visible');
+  const html = generateReplayHTML(payload);
+  const blob = new Blob([html], { type: 'text/html' });
+  downloadFile(blob, `whiteboard-replay-${Date.now()}.html`);
 });
